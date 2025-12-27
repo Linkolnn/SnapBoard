@@ -1,137 +1,138 @@
 <template>
-  <div class="demo-page">
-    <h1>SnapBoard UI Components</h1>
-    
-    <!-- Секция с кнопками -->
-    <section class="demo-section">
-      <h2>Buttons</h2>
-      <div class="demo-row">
-        <CommonBaseButton variant="primary">Primary Button</CommonBaseButton>
-        <CommonBaseButton variant="secondary">Secondary Button</CommonBaseButton>
-        <CommonBaseButton variant="outline">Outline Button</CommonBaseButton>
-        <CommonBaseButton variant="primary" :loading="true">Loading...</CommonBaseButton>
-        <CommonBaseButton variant="primary" :disabled="true">Disabled</CommonBaseButton>
-      </div>
+  <div class="home-page">
+    <section class="home-page__hero">
+      <h1>Добро пожаловать в SnapBoard</h1>
+      <p>Ваша визуальная доска вдохновения</p>
     </section>
     
-    <!-- Секция с полями ввода -->
-    <section class="demo-section">
-      <h2>Inputs</h2>
-      <div class="demo-column">
-        <CommonBaseInput
-          v-model="email"
-          label="Email"
-          type="email"
-          placeholder="Enter your email"
-          hint="We'll never share your email"
-        />
-        <CommonBaseInput
-          v-model="password"
-          label="Password"
-          type="password"
-          placeholder="Enter password"
-          :required="true"
-        />
-        <CommonBaseInput
-          v-model="error"
-          label="Field with error"
-          error="This field is required"
-        />
-      </div>
-    </section>
-    
-    <!-- Секция с карточками -->
-    <section class="demo-section">
-      <h2>Cards</h2>
-      <div class="demo-row">
-        <CommonBaseCard>
-          <div style="padding: 20px">
-            <h3>Static Card</h3>
-            <p>This is a simple card</p>
-          </div>
-        </CommonBaseCard>
-        <CommonBaseCard :clickable="true" @click="handleCardClick">
-          <div style="padding: 20px">
-            <h3>Clickable Card</h3>
-            <p>Click me!</p>
-          </div>
-        </CommonBaseCard>
-      </div>
-    </section>
-    
-    <!-- Секция с модальным окном -->
-    <section class="demo-section">
-      <h2>Modal</h2>
-      <CommonBaseButton @click="showModal = true">Open Modal</CommonBaseButton>
+    <section class="home-page__gallery">
+      <h2>Популярные изображения</h2>
       
-      <CommonBaseModal v-model="showModal" title="Example Modal">
-        <p>This is modal content. You can put anything here.</p>
-        
-        <template #footer>
-          <CommonBaseButton variant="outline" @click="showModal = false">
-            Cancel
-          </CommonBaseButton>
-          <CommonBaseButton variant="primary" @click="showModal = false">
-            Confirm
-          </CommonBaseButton>
-        </template>
-      </CommonBaseModal>
-    </section>
-    
-    <!-- Секция с загрузчиком -->
-    <section class="demo-section">
-      <h2>Loader</h2>
-      <div class="demo-row">
-        <CommonBaseLoader size="small" />
-        <CommonBaseLoader size="medium" />
-        <CommonBaseLoader size="large" />
-      </div>
+      <!-- Masonry Grid с изображениями -->
+      <ImageMasonryGrid
+        :images="mockImages"
+        :is-loading="isLoading"
+        @image-click="handleImageClick"
+      />
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { Image } from '~/types'
 
-// Реактивные данные для демонстрации
-const email = ref('')
-const password = ref('')
-const error = ref('')
-const showModal = ref(false)
+/**
+ * Состояние загрузки
+ */
+const isLoading = ref(true)
 
-// Обработчик клика по карточке
-const handleCardClick = () => {
-  alert('Card clicked!')
+/**
+ * Mock данные изображений для демонстрации
+ * В реальном приложении будут загружаться с API
+ */
+const mockImages = ref<Image[]>([
+  {
+    id: '1',
+    url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSaA23Orn8cIauyUDtC-hmrUTguMwW9q5kyvg&s',
+    title: 'Красивый пейзаж',
+    description: 'Удивительный вид на горы',
+    boardId: '1',
+    userId: '1',
+    tags: ['природа', 'горы', 'пейзаж'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: '2',
+    url: 'https://picsum.photos/400/300',
+    title: 'Архитектура',
+    description: 'Современное здание',
+    boardId: '1',
+    userId: '1',
+    tags: ['архитектура', 'дизайн'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: '3',
+    url: 'https://picsum.photos/400/500',
+    title: 'Интерьер',
+    boardId: '1',
+    userId: '1',
+    tags: ['интерьер', 'дизайн', 'уют'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: '4',
+    url: 'https://picsum.photos/400/400',
+    title: 'Еда',
+    description: 'Вкусная еда',
+    boardId: '1',
+    userId: '1',
+    tags: ['еда', 'рецепты'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: '5',
+    url: 'https://picsum.photos/400/550',
+    title: 'Мода',
+    boardId: '1',
+    userId: '1',
+    tags: ['мода', 'стиль'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: '6',
+    url: 'https://picsum.photos/400/350',
+    title: 'Искусство',
+    boardId: '1',
+    userId: '1',
+    tags: ['искусство'],
+    createdAt: new Date().toISOString()
+  }
+])
+
+/**
+ * Обработчик клика по изображению
+ * Здесь можно открыть модальное окно с деталями
+ */
+const handleImageClick = (image: Image) => {
+  console.log('Image clicked:', image)
+  // В следующем этапе откроем модальное окно
 }
+
+/**
+ * Имитация загрузки данных
+ */
+onMounted(() => {
+  setTimeout(() => {
+    isLoading.value = false
+  }, 1000)
+})
 </script>
 
 <style lang="sass" scoped>
 @import '@/assets/styles/variables'
-@import '@/assets/styles/reset'
 
-.demo-page
-  padding: 32px
+.home-page
+  padding: 32px 0
   
-  h1
-    font-size: 32px
-    margin-bottom: 32px
-    color: $text-light
-
-.demo-section
-  margin-bottom: 48px
+  &__hero
+    text-align: center
+    margin-bottom: 48px
+    
+    h1
+      font-size: 42px
+      font-weight: 700
+      color: $text-light
+      margin-bottom: 16px
+    
+    p
+      font-size: 18px
+      color: $gray-500
   
-  h2
-    font-size: 24px
-    margin-bottom: 24px
-    color: $text-light
-
-.demo-row
-  display: flex
-  gap: 16px
-  flex-wrap: wrap
-
-.demo-column
-  display: flex
-  flex-direction: column
-  gap: 16px
-  max-width: 400px
+  &__gallery
+    h2
+      font-size: 28px
+      font-weight: 700
+      color: $text-light
+      margin-bottom: 32px
 </style>
