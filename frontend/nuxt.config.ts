@@ -2,7 +2,11 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['nuxt-security'],
+  ssr: false,
+  modules: [
+    '@pinia/nuxt',
+    'nuxt-security'
+  ],
   typescript: {
     strict: true,
     shim: false
@@ -22,6 +26,11 @@ export default defineNuxtConfig({
     }
   },
 
+    // Pinia конфигурация
+  pinia: {
+    storesDirs: ['./stores/**'], // путь к stores
+  },
+
   app: {
     head: {
       title: 'SnapBoard - Visual Inspiration Board',
@@ -34,5 +43,21 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ]
     }
-  }
+  },
+
+    // ... остальная конфигурация
+  
+  runtimeConfig: {
+    public: {
+      apiBase: process.env.API_BASE_URL || 'http://localhost:3001/api'
+    }
+  },
+  
+  // Настройки для работы с cookies
+  nitro: {
+    experimental: {
+      // Включаем поддержку cookies в SSR
+      payloadExtraction: false
+    }
+  },
 })

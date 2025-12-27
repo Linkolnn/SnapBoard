@@ -15,7 +15,7 @@
 interface Props {
     variant?: 'primary' | 'secondary' | 'outline'
     disabled?: boolean
-    loading: boolean
+    loading?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
@@ -33,16 +33,15 @@ const handleClick = () => {
 };
 </script>
 
-<style lang="sass">
+<style lang="sass" scoped>
 @import '@/assets/styles/variables'
 
-.base-button
+.base-btn
   position: relative
   display: inline-flex
   align-items: center
   justify-content: center
-  padding: $spacing-unit * 1.5 $spacing-unit * 3 // 12px 24px
-  min-width: 120px  
+  padding: 10px 16px // 12px 24px 
   font-size: 16px
   font-weight: 600
   line-height: 1.5
@@ -103,11 +102,12 @@ const handleClick = () => {
   &__content
     display: flex
     align-items: center
-    gap: $spacing-unit
+    gap: 8px
 
   &__spinner
-    width: 20px
-    height: 20px
+    padding: 10px
+    max-width: 20px
+    max-height: 20px
     border: 2px solid rgba(255, 255, 255, 0.3)
     border-top-color: white
     border-radius: 50%

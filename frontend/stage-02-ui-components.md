@@ -777,31 +777,57 @@ withDefaults(defineProps<Props>(), {
 ```vue
 <template>
   <!-- 
-    Базовый layout приложения
-    - Используется на всех страницах по умолчанию
-    - Включает Header, основной контент и Footer
+    Основной layout приложения
+    - Использует AppHeader
+    - Поддерживает опциональный Sidebar
+    - Семантические теги для структуры
   -->
   <div class="layout">
-    <!-- Header - будет создан в следующих этапах -->
-    <header class="layout__header">
-      <div class="layout__container">
-        <h1>SnapBoard</h1>
-        <!-- Здесь будет навигация -->
-      </div>
-    </header>
+    <!-- Header приложения -->
+    <AppHeader />
     
-    <!-- Основной контент страницы -->
+    <!-- Основной контент -->
     <main class="layout__main">
       <div class="layout__container">
-        <!-- slot - сюда вставляется содержимое страницы -->
-        <slot />
+        <!-- 
+          Если страница использует sidebar - показываем layout с сеткой
+          Иначе - просто контент во всю ширину
+        -->
+        <slot name="content" />
       </div>
     </main>
     
     <!-- Footer -->
     <footer class="layout__footer">
       <div class="layout__container">
-        <p>&copy; 2024 SnapBoard. Visual Inspiration Board</p>
+        <div class="layout__footer-content">
+          <div class="layout__footer-section">
+            <h4>SnapBoard</h4>
+            <p>Визуальная доска вдохновения</p>
+          </div>
+          
+          <div class="layout__footer-section">
+            <h4>Навигация</h4>
+            <ul class="layout__footer-links">
+              <li><NuxtLink to="/">Главная</NuxtLink></li>
+              <li><NuxtLink to="/boards">Доски</NuxtLink></li>
+              <li><NuxtLink to="/about">О проекте</NuxtLink></li>
+            </ul>
+          </div>
+          
+          <div class="layout__footer-section">
+            <h4>Поддержка</h4>
+            <ul class="layout__footer-links">
+              <li><NuxtLink to="/help">Помощь</NuxtLink></li>
+              <li><NuxtLink to="/privacy">Конфиденциальность</NuxtLink></li>
+              <li><NuxtLink to="/terms">Условия</NuxtLink></li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="layout__footer-bottom">
+          <p>&copy; 2024 SnapBoard. Все права защищены</p>
+        </div>
       </div>
     </footer>
   </div>
@@ -812,51 +838,86 @@ withDefaults(defineProps<Props>(), {
 @import '@/assets/styles/mixins'
 
 .layout
-  // Layout на всю высоту экрана
   min-height: 100vh
   display: flex
   flex-direction: column
   background: $gray-100
-
-  // Контейнер для ограничения ширины контента
+  
+  // Контейнер для ограничения ширины
   &__container
     max-width: $breakpoint-desktop
     width: 100%
     margin: 0 auto
     padding: 0 $spacing-unit * 3
     
-    // На мобильных уменьшаем отступы
     @include mobile
       padding: 0 $spacing-unit * 2
-
-  // Header приложения
-  &__header
-    background: white
-    border-bottom: 1px solid $gray-200
-    padding: $spacing-unit * 2 0
-    position: sticky // прилипает к верху при прокрутке
-    top: 0
-    z-index: $z-index-dropdown
-    
-    h1
-      font-size: 24px
-      color: $text-light
-
-  // Основной контент
+  
+  // Основной контент - растягивается на всю доступную высоту
   &__main
-    flex: 1 // занимает всё доступное пространство
+    flex: 1
     padding: $spacing-unit * 4 0
-
+    
+    @include mobile
+      padding: $spacing-unit * 3 0
+  
   // Footer
   &__footer
     background: $secondary-color
     color: $text-dark
-    padding: $spacing-unit * 3 0
+    padding: $spacing-unit * 6 0 $spacing-unit * 3
+    margin-top: $spacing-unit * 8
+  
+  &__footer-content
+    display: grid
+    grid-template-columns: repeat(3, 1fr)
+    gap: $spacing-unit * 4
+    margin-bottom: $spacing-unit * 4
+    
+    // На планшетах - 2 колонки
+    @include tablet
+      grid-template-columns: repeat(2, 1fr)
+    
+    // На мобильных - 1 колонка
+    @include mobile
+      grid-template-columns: 1fr
+  
+  &__footer-section
+    h4
+      font-size: 16px
+      font-weight: 700
+      margin-bottom: $spacing-unit * 2
+      color: $text-dark
+    
+    p
+      font-size: 14px
+      color: rgba(255, 255, 255, 0.7)
+      line-height: 1.6
+  
+  &__footer-links
+    list-style: none
+    display: flex
+    flex-direction: column
+    gap: $spacing-unit
+    
+    a
+      color: rgba(255, 255, 255, 0.7)
+      text-decoration: none
+      font-size: 14px
+      transition: color $transition-fast
+      
+      &:hover
+        color: $primary-color
+  
+  &__footer-bottom
+    padding-top: $spacing-unit * 3
+    border-top: 1px solid rgba(255, 255, 255, 0.1)
     text-align: center
     
     p
-      margin: 0
       font-size: 14px
+      color: rgba(255, 255, 255, 0.5)
+      margin: 0
 </style>
 ```
 
