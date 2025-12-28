@@ -58,6 +58,7 @@
     </article>
 </template>
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useAuthStore } from '~/store/auth'
 import { useFormValidation, requiredRule, emailRule, minLengthRule } from '~/composables/useFormValidation'
 
@@ -70,6 +71,15 @@ const authStore = useAuthStore()
  * Router для навигации после успешного входа
  */
 const router = useRouter()
+const route = useRoute()
+
+/**
+ * Получаем redirect URL из query параметров
+ */
+const redirectUrl = computed(() => {
+  const redirect = route.query.redirect as string
+  return redirect || '/'
+})
 
 /**
  * Инициализация валидации формы
@@ -105,9 +115,9 @@ const handleSubmit = async () => {
     fields.value.password.value
   )
   
-  // Если успешно - перенаправляем на главную
+  // Если успешно - перенаправляем на redirect URL или главную
   if (result.success) {
-    router.push('/')
+    router.push(redirectUrl.value)
   }
 }
 </script>

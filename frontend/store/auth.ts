@@ -6,30 +6,29 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
-  
+
+  // Cookie для проверки авторизации (httpOnly: false)
   const accessTokenCookie = useCookie('access_token', {
     maxAge: 60 * 15,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
+    sameSite: 'lax',
+    path: '/'
   })
 
   const isAuthenticated = computed(() => {
-    return !!user.value && !!accessTokenCookie.value
+    return !!accessTokenCookie.value
   })
 
   const login = async (email: string, password: string) => {
     isLoading.value = true
     error.value = null
-    
+
     try {
-      // Используем /api/ для Nuxt server API
       const response = await $fetch('/api/auth/login', {
         method: 'POST',
         body: { email, password }
       })
-      
+
       user.value = response.user
-      
       return { success: true }
     } catch (err: any) {
       console.error('Login error:', err)
@@ -39,20 +38,18 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = false
     }
   }
-  
+
   const register = async (username: string, email: string, password: string) => {
     isLoading.value = true
     error.value = null
-    
+
     try {
-      // Используем /api/ для Nuxt server API
       const response = await $fetch('/api/auth/register', {
         method: 'POST',
         body: { username, email, password }
       })
-      
+
       user.value = response.user
-      
       return { success: true }
     } catch (err: any) {
       console.error('Register error:', err)
@@ -62,12 +59,10 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = false
     }
   }
-  
+
   const logout = async () => {
     try {
-      await $fetch('/api/auth/logout', {
-        method: 'POST'
-      })
+      await $fetch('/api/auth/logout', { method: 'POST' })
     } catch (err) {
       console.error('Logout error:', err)
     } finally {
@@ -76,12 +71,10 @@ export const useAuthStore = defineStore('auth', () => {
       accessTokenCookie.value = null
     }
   }
-  
+
   const fetchCurrentUser = async () => {
-    if (!accessTokenCookie.value) {
-      return
-    }
-    
+    if (!accessTokenCookie.value) return
+
     try {
       const response = await $fetch('/api/auth/me')
       user.value = response.user
@@ -91,12 +84,10 @@ export const useAuthStore = defineStore('auth', () => {
       accessTokenCookie.value = null
     }
   }
-  
+
   const refreshAccessToken = async () => {
     try {
-      await $fetch('/api/auth/refresh', {
-        method: 'POST'
-      })
+      await $fetch('/api/auth/refresh', { method: 'POST' })
       return true
     } catch (err) {
       console.error('Token refresh failed:', err)
