@@ -5,150 +5,103 @@ import { ref, onMounted, onUnmounted } from 'vue'
  */
 interface MasonryItem {
   id: string
-  height: number  // высота элемента в пикселях
-  column: number  // в какую колонку поместить элемент
-  top: number     // позиция сверху в пикселях
+  height: number
+  column: number
+  top: number
 }
 
 /**
  * Composable для расчёта Masonry Layout
- * Автоматически распределяет элементы по колонкам
+ * Колонки автоматически растягиваются на всю доступную ширину
  * 
- * @param columnWidth - ширина одной колонки в пикселях
- * @param gap - отступ между элементами в пикселях
- * @returns объект с методами и данными для layout
+ * @param minColumnWidth - минимальная ширина колонки
+ * @param gap - отступ между элементами
  */
-export const useMasonryLayout = (columnWidth = 280, gap = 16) => {
-  /**
-   * Массив элементов с рассчитанными позициями
-   */
+export const useMasonryLayout = (minColumnWidth = 150, gap = 10) => {
   const items = ref<MasonryItem[]>([])
-  
-  /**
-   * Количество колонок на текущем экране
-   */
   const columnCount = ref(0)
-  
-  /**
-   * Высота каждой колонки (для равномерного распределения)
-   */
+  const columnWidth = ref(0)
   const columnHeights = ref<number[]>([])
-  
-  /**
-   * Общая высота контейнера Masonry Grid
-   */
   const containerHeight = ref(0)
   
   /**
-   * Расчёт количества колонок в зависимости от ширины экрана
+   * Расчёт количества колонок и их ширины
+   * @param availableWidth - доступная ширина (за вычетом padding)
    */
-  const calculateColumnCount = (): number => {
-    if (!process.client) return 4
-    
-    const containerWidth = window.innerWidth
-    
-    // Вычитаем padding контейнера (24px * 2)
-    const availableWidth = containerWidth - 48
+  const calculateColumns = (availableWidth: number) => {
+    if (availableWidth <= 0) {
+      return { count: 1, width: availableWidth }
+    }
     
     // Рассчитываем сколько колонок влезет
-    const cols = Math.floor((availableWidth + gap) / (columnWidth + gap))
+    const maxColumns = Math.floor((availableWidth + gap) / (minColumnWidth + gap))
+    const count = Math.max(1, Math.min(maxColumns, 6))
     
-    // Минимум 1 колонка, максимум 6
-    return Math.max(1, Math.min(cols, 6))
+    // Рассчитываем ширину колонки чтобы заполнить всё пространство
+    const totalGaps = (count - 1) * gap
+    const width = Math.floor((availableWidth - totalGaps) / count)
+    
+    return { count, width }
   }
   
   /**
-   * Найти колонку с минимальной высотой
-   * Это нужно чтобы элементы распределялись равномерно
+   * Найти самую короткую колонку
    */
   const getShortestColumn = (): number => {
-    let shortestColumn = 0
+    let shortest = 0
     let minHeight = columnHeights.value[0] || 0
     
     for (let i = 1; i < columnHeights.value.length; i++) {
       if (columnHeights.value[i] < minHeight) {
         minHeight = columnHeights.value[i]
-        shortestColumn = i
+        shortest = i
       }
     }
     
-    return shortestColumn
+    return shortest
   }
   
   /**
-   * Расчёт позиций всех элементов
+   * Расчёт layout
    * @param itemHeights - массив высот элементов
+   * @param availableWidth - доступная ширина контейнера
    */
-  const calculateLayout = (itemHeights: number[]) => {
-    // Инициализируем колонки
-    columnCount.value = calculateColumnCount()
-    columnHeights.value = new Array(columnCount.value).fill(0)
+  const calculateLayout = (itemHeights: number[], availableWidth: number) => {
+    if (!itemHeights.length || availableWidth <= 0) return
     
-    // Массив для рассчитанных элементов
+    const { count, width } = calculateColumns(availableWidth)
+    columnCount.value = count
+    columnWidth.value = width
+    columnHeights.value = new Array(count).fill(0)
+    
     const calculatedItems: MasonryItem[] = []
     
-    // Проходим по каждому элементу
     itemHeights.forEach((height, index) => {
-      // Находим самую короткую колонку
+      // Используем минимальную высоту если высота = 0
+      const itemHeight = height > 0 ? height : 300
+      
       const column = getShortestColumn()
       
-      // Вычисляем позицию элемента
-      const item: MasonryItem = {
+      calculatedItems.push({
         id: `item-${index}`,
-        height: height,
-        column: column,
+        height: itemHeight,
+        column,
         top: columnHeights.value[column]
-      }
+      })
       
-      calculatedItems.push(item)
-      
-      // Увеличиваем высоту колонки (высота элемента + gap)
-      columnHeights.value[column] += height + gap
+      columnHeights.value[column] += itemHeight + gap
     })
     
-    // Обновляем items
     items.value = calculatedItems
-    
-    // Общая высота = высота самой длинной колонки
-    containerHeight.value = Math.max(...columnHeights.value)
+    containerHeight.value = Math.max(...columnHeights.value, 0)
   }
-  
-  /**
-   * Пересчёт layout при изменении размера окна
-   */
-  const handleResize = () => {
-    // Получаем текущие высоты элементов
-    const heights = items.value.map(item => item.height)
-    if (heights.length > 0) {
-      calculateLayout(heights)
-    }
-  }
-  
-  /**
-   * Инициализация при монтировании компонента
-   */
-  onMounted(() => {
-    if (process.client) {
-      window.addEventListener('resize', handleResize)
-    }
-  })
-  
-  /**
-   * Очистка при размонтировании
-   */
-  onUnmounted(() => {
-    if (process.client) {
-      window.removeEventListener('resize', handleResize)
-    }
-  })
   
   return {
     items,
     columnCount,
     columnWidth,
-    gap,
     containerHeight,
-    calculateLayout,
-    handleResize
+    gap,
+    calculateLayout
   }
 }

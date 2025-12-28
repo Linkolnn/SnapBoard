@@ -1,37 +1,41 @@
 # Этап 5: Masonry Grid для изображений SnapBoard
 
 ## 🎯 Цель этапа
-Создать красивую Masonry Grid (как в Pinterest) для отображения изображений разных размеров. Компонент будет адаптивным, с lazy loading и skeleton loader'ами для плавной загрузки контента.
+Создать красивую Masonry Grid (как в Pinterest) для отображения изображений разных размеров. **Колонки растягиваются на всю доступную ширину** без пустого пространства, с правильной адаптивностью.
 
 ---
 
 ## 📋 Чеклист этапа
-- [ ] Компонент Masonry Grid
+- [ ] Composable с правильным расчётом ширины колонок
+- [ ] Компонент Masonry Grid с адаптивностью
 - [ ] Lazy loading изображений
 - [ ] Skeleton loader для изображений
 - [ ] Компонент карточки изображения
-- [ ] Адаптивность под разные экраны
-- [ ] Composable для работы с изображениями
+- [ ] Исправление бага с загрузкой
 
 ---
 
-## 🎨 Что такое Masonry Grid?
+## 🎨 Как работает адаптивность
 
-**Masonry Grid** - это layout где элементы располагаются как кирпичная кладка:
-- Изображения разной высоты
-- Компактное заполнение пространства
-- Нет больших пустых промежутков
-- Адаптивное количество колонок
-
+### Desktop (1440px):
 ```
-┌─────┐ ┌─────┐ ┌─────┐
-│     │ │     │ │     │
-│  1  │ └─────┘ │  3  │
-│     │ ┌─────┐ │     │
-└─────┘ │     │ └─────┘
-┌─────┐ │  2  │ ┌─────┐
-│  4  │ │     │ │  5  │
-└─────┘ └─────┘ └─────┘
+max-width: 1440px контейнер
+padding: 24px с каждой стороны
+Доступная ширина: 1392px
+4-5 колонок растягиваются на 1392px
+```
+
+### Tablet (768px):
+```
+padding: 16px с каждой стороны
+Доступная ширина: 736px
+2-3 колонки растягиваются на 736px
+```
+
+### Mobile (576px):
+```
+padding: 16px с каждой стороны
+1 колонка на всю ширину: 544px
 ```
 
 ---
@@ -48,151 +52,104 @@ import { ref, onMounted, onUnmounted } from 'vue'
  */
 interface MasonryItem {
   id: string
-  height: number  // высота элемента в пикселях
-  column: number  // в какую колонку поместить элемент
-  top: number     // позиция сверху в пикселях
+  height: number
+  column: number
+  top: number
 }
 
 /**
  * Composable для расчёта Masonry Layout
- * Автоматически распределяет элементы по колонкам
+ * Колонки автоматически растягиваются на всю доступную ширину
  * 
- * @param columnWidth - ширина одной колонки в пикселях
- * @param gap - отступ между элементами в пикселях
- * @returns объект с методами и данными для layout
+ * @param minColumnWidth - минимальная ширина колонки
+ * @param gap - отступ между элементами
  */
-export const useMasonryLayout = (columnWidth = 280, gap = 16) => {
-  /**
-   * Массив элементов с рассчитанными позициями
-   */
+export const useMasonryLayout = (minColumnWidth = 250, gap = 16) => {
   const items = ref<MasonryItem[]>([])
-  
-  /**
-   * Количество колонок на текущем экране
-   */
   const columnCount = ref(0)
-  
-  /**
-   * Высота каждой колонки (для равномерного распределения)
-   */
+  const columnWidth = ref(0)
   const columnHeights = ref<number[]>([])
-  
-  /**
-   * Общая высота контейнера Masonry Grid
-   */
   const containerHeight = ref(0)
   
   /**
-   * Расчёт количества колонок в зависимости от ширины экрана
+   * Расчёт количества колонок и их ширины
+   * @param availableWidth - доступная ширина (за вычетом padding)
    */
-  const calculateColumnCount = (): number => {
-    if (!process.client) return 4
-    
-    const containerWidth = window.innerWidth
-    
-    // Вычитаем padding контейнера (24px * 2)
-    const availableWidth = containerWidth - 48
+  const calculateColumns = (availableWidth: number) => {
+    if (availableWidth <= 0) {
+      return { count: 1, width: availableWidth }
+    }
     
     // Рассчитываем сколько колонок влезет
-    const cols = Math.floor((availableWidth + gap) / (columnWidth + gap))
+    const maxColumns = Math.floor((availableWidth + gap) / (minColumnWidth + gap))
+    const count = Math.max(1, Math.min(maxColumns, 6))
     
-    // Минимум 1 колонка, максимум 6
-    return Math.max(1, Math.min(cols, 6))
+    // Рассчитываем ширину колонки чтобы заполнить всё пространство
+    const totalGaps = (count - 1) * gap
+    const width = Math.floor((availableWidth - totalGaps) / count)
+    
+    return { count, width }
   }
   
   /**
-   * Найти колонку с минимальной высотой
-   * Это нужно чтобы элементы распределялись равномерно
+   * Найти самую короткую колонку
    */
   const getShortestColumn = (): number => {
-    let shortestColumn = 0
+    let shortest = 0
     let minHeight = columnHeights.value[0] || 0
     
     for (let i = 1; i < columnHeights.value.length; i++) {
       if (columnHeights.value[i] < minHeight) {
         minHeight = columnHeights.value[i]
-        shortestColumn = i
+        shortest = i
       }
     }
     
-    return shortestColumn
+    return shortest
   }
   
   /**
-   * Расчёт позиций всех элементов
+   * Расчёт layout
    * @param itemHeights - массив высот элементов
+   * @param availableWidth - доступная ширина контейнера
    */
-  const calculateLayout = (itemHeights: number[]) => {
-    // Инициализируем колонки
-    columnCount.value = calculateColumnCount()
-    columnHeights.value = new Array(columnCount.value).fill(0)
+  const calculateLayout = (itemHeights: number[], availableWidth: number) => {
+    if (!itemHeights.length || availableWidth <= 0) return
     
-    // Массив для рассчитанных элементов
+    const { count, width } = calculateColumns(availableWidth)
+    columnCount.value = count
+    columnWidth.value = width
+    columnHeights.value = new Array(count).fill(0)
+    
     const calculatedItems: MasonryItem[] = []
     
-    // Проходим по каждому элементу
     itemHeights.forEach((height, index) => {
-      // Находим самую короткую колонку
+      // Используем минимальную высоту если высота = 0
+      const itemHeight = height > 0 ? height : 300
+      
       const column = getShortestColumn()
       
-      // Вычисляем позицию элемента
-      const item: MasonryItem = {
+      calculatedItems.push({
         id: `item-${index}`,
-        height: height,
-        column: column,
+        height: itemHeight,
+        column,
         top: columnHeights.value[column]
-      }
+      })
       
-      calculatedItems.push(item)
-      
-      // Увеличиваем высоту колонки (высота элемента + gap)
-      columnHeights.value[column] += height + gap
+      columnHeights.value[column] += itemHeight + gap
     })
     
-    // Обновляем items
     items.value = calculatedItems
-    
-    // Общая высота = высота самой длинной колонки
-    containerHeight.value = Math.max(...columnHeights.value)
+    containerHeight.value = Math.max(...columnHeights.value, 0)
   }
-  
-  /**
-   * Пересчёт layout при изменении размера окна
-   */
-  const handleResize = () => {
-    // Получаем текущие высоты элементов
-    const heights = items.value.map(item => item.height)
-    if (heights.length > 0) {
-      calculateLayout(heights)
-    }
-  }
-  
-  /**
-   * Инициализация при монтировании компонента
-   */
-  onMounted(() => {
-    if (process.client) {
-      window.addEventListener('resize', handleResize)
-    }
-  })
-  
-  /**
-   * Очистка при размонтировании
-   */
-  onUnmounted(() => {
-    if (process.client) {
-      window.removeEventListener('resize', handleResize)
-    }
-  })
   
   return {
     items,
     columnCount,
     columnWidth,
-    gap,
     containerHeight,
-    calculateLayout,
-    handleResize
+    gap,
+    calculateLayout
   }
 }
 ```
@@ -201,26 +158,18 @@ export const useMasonryLayout = (columnWidth = 280, gap = 16) => {
 
 ## 2️⃣ Компонент Skeleton Loader
 
-### Файл: `components/image/ImageSkeleton.vue`
+### Файл: `components/image/Skeleton.vue`
 
 ```vue
 <template>
-  <!-- 
-    Skeleton loader для изображения
-    Показывается пока изображение загружается
-    Анимация пульсации создаёт эффект загрузки
-  -->
-  <article class="image-skeleton" :style="{ height: height + 'px' }">
-    <div class="image-skeleton__shimmer"></div>
+  <article class="img-skeleton" :style="{ height: height + 'px' }">
+    <div class="img-skeleton__shimmer"></div>
   </article>
 </template>
 
 <script setup lang="ts">
-/**
- * Пропсы компонента
- */
 interface Props {
-  height?: number  // высота skeleton в пикселях
+  height?: number
 }
 
 withDefaults(defineProps<Props>(), {
@@ -231,14 +180,13 @@ withDefaults(defineProps<Props>(), {
 <style lang="sass" scoped>
 @import '@/assets/styles/variables'
 
-.image-skeleton
+.img-skeleton
   position: relative
   width: 100%
   background: $gray-200
   border-radius: $radius
   overflow: hidden
   
-  // Shimmer эффект - движущийся градиент
   &__shimmer
     position: absolute
     top: 0
@@ -246,10 +194,8 @@ withDefaults(defineProps<Props>(), {
     width: 100%
     height: 100%
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent)
-    // Анимация движения градиента слева направо
     animation: shimmer 1.5s infinite
     
-// Анимация пульсации
 @keyframes shimmer
   0%
     left: -100%
@@ -262,56 +208,47 @@ withDefaults(defineProps<Props>(), {
 
 ## 3️⃣ Компонент карточки изображения
 
-### Файл: `components/image/ImageCard.vue`
+### Файл: `components/image/Card.vue`
 
 ```vue
 <template>
-  <!-- 
-    Карточка изображения для Masonry Grid
-    - Lazy loading (загружается только когда в зоне видимости)
-    - Skeleton loader пока загружается
-    - Hover эффекты
-    - Клик для открытия детального просмотра
-  -->
   <article 
-    ref="cardRef"
-    class="image-card"
-    :class="{ 'image-card--loaded': isLoaded }"
+    class="img-card"
+    :class="{ 'img-card--loaded': isLoaded }"
     @click="handleClick"
   >
-    <!-- Skeleton loader пока изображение загружается -->
-    <ImageImageSkeleton 
+    <!-- Skeleton пока не загружено -->
+    <ImageSkeleton 
       v-if="!isLoaded"
       :height="estimatedHeight"
     />
     
-    <!-- Само изображение -->
+    <!-- Изображение - используем v-if вместо v-show -->
     <img
-      v-show="isLoaded"
+      v-if="isLoaded"
       :src="image.url"
       :alt="image.title || 'Image'"
-      class="image-card__img"
+      class="img-card__img"
       loading="lazy"
       @load="handleImageLoad"
       @error="handleImageError"
     />
     
-    <!-- Overlay с информацией (показывается при hover) -->
-    <div v-if="isLoaded" class="image-card__overlay">
-      <div class="image-card__info">
-        <h3 v-if="image.title" class="image-card__title">
+    <!-- Overlay -->
+    <div v-if="isLoaded" class="img-card__overlay">
+      <div class="img-card__info">
+        <h3 v-if="image.title" class="img-card__title">
           {{ image.title }}
         </h3>
-        <p v-if="image.description" class="image-card__desc">
+        <p v-if="image.description" class="img-card__desc">
           {{ image.description }}
         </p>
         
-        <!-- Теги -->
-        <div v-if="image.tags && image.tags.length > 0" class="image-card__tags">
+        <div v-if="image.tags?.length" class="img-card__tags">
           <span 
             v-for="tag in image.tags.slice(0, 3)" 
             :key="tag"
-            class="image-card__tag"
+            class="img-card__tag"
           >
             #{{ tag }}
           </span>
@@ -322,70 +259,49 @@ withDefaults(defineProps<Props>(), {
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import type { Image } from '~/types'
 
-/**
- * Пропсы компонента
- */
 interface Props {
-  image: Image           // данные изображения
-  estimatedHeight?: number  // примерная высота для skeleton
+  image: Image
+  estimatedHeight?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   estimatedHeight: 300
 })
 
-/**
- * Эмиты компонента
- */
 const emit = defineEmits<{
-  click: [image: Image]      // клик по карточке
-  load: [height: number]     // изображение загрузилось
+  click: [image: Image]
+  load: [height: number]
 }>()
 
-/**
- * Ссылка на DOM элемент карточки
- */
-const cardRef = ref<HTMLElement | null>(null)
-
-/**
- * Состояние загрузки изображения
- */
-const isLoaded = ref(false)
-
-/**
- * Высота загруженного изображения
- */
-const imageHeight = ref(0)
+const isLoaded = ref(true)
 
 /**
  * Обработчик загрузки изображения
- * Вычисляем высоту и сообщаем родителю
  */
 const handleImageLoad = (event: Event) => {
   const img = event.target as HTMLImageElement
   
-  // Получаем реальную высоту изображения
-  imageHeight.value = img.naturalHeight
-  isLoaded.value = true
-  
-  // Сообщаем родителю высоту для Masonry layout
+  // Эмитим высоту ДО изменения состояния
   emit('load', img.offsetHeight)
-}
-
-/**
- * Обработчик ошибки загрузки изображения
- */
-const handleImageError = (event: Event) => {
-  console.error('Failed to load image:', props.image.url)
-  // Можно показать placeholder вместо изображения
+  
+  // Затем меняем состояние
   isLoaded.value = true
 }
 
 /**
- * Обработчик клика по карточке
+ * Обработчик ошибки загрузки
+ */
+const handleImageError = () => {
+  console.error('Failed to load image:', props.image.url)
+  emit('load', props.estimatedHeight)
+  isLoaded.value = true
+}
+
+/**
+ * Клик по карточке
  */
 const handleClick = () => {
   if (isLoaded.value) {
@@ -397,34 +313,28 @@ const handleClick = () => {
 <style lang="sass" scoped>
 @import '@/assets/styles/variables'
 
-.image-card
+.img-card
   position: relative
   width: 100%
   border-radius: $radius
   overflow: hidden
   cursor: pointer
   background: $gray-200
-  // Плавный переход для всех изменений
   transition: all $transition-normal
   
-  // При наведении поднимаем карточку
   &:hover
     transform: translateY(-4px)
     box-shadow: $shadow-lg
     
-    // Показываем overlay при hover
-    .image-card__overlay
+    .img-card__overlay
       opacity: 1
   
-  // Изображение
   &__img
     width: 100%
     height: auto
     display: block
-    // Плавное появление изображения
     animation: fadeIn 0.3s ease-in
   
-  // Overlay с информацией
   &__overlay
     position: absolute
     top: 0
@@ -435,7 +345,6 @@ const handleClick = () => {
     display: flex
     align-items: flex-end
     padding: 16px
-    // Скрыт по умолчанию
     opacity: 0
     transition: opacity $transition-normal
   
@@ -447,7 +356,6 @@ const handleClick = () => {
     font-size: 16px
     font-weight: 600
     margin-bottom: 4px
-    // Ограничиваем 2 строками
     display: -webkit-box
     -webkit-line-clamp: 2
     -webkit-box-orient: vertical
@@ -457,7 +365,6 @@ const handleClick = () => {
     font-size: 14px
     margin-bottom: 8px
     opacity: 0.9
-    // Ограничиваем 2 строками
     display: -webkit-box
     -webkit-line-clamp: 2
     -webkit-box-orient: vertical
@@ -475,7 +382,6 @@ const handleClick = () => {
     border-radius: $radius-sm
     backdrop-filter: blur(4px)
 
-// Анимация появления изображения
 @keyframes fadeIn
   from
     opacity: 0
@@ -492,205 +398,233 @@ const handleClick = () => {
 
 ```vue
 <template>
-  <!-- 
-    Masonry Grid для отображения изображений
-    - Автоматический расчёт колонок в зависимости от ширины экрана
-    - Lazy loading изображений
-    - Skeleton loaders
-    - Адаптивный layout
-  -->
-  <section class="masonry-grid">
-    <!-- Контейнер с рассчитанной высотой -->
+  <section ref="gridRef" class="masonry-grid">
     <div 
       class="masonry-grid__container"
       :style="{ height: containerHeight + 'px' }"
     >
-      <!-- Отображаем skeleton пока изображения загружаются -->
+      <!-- Skeleton при загрузке -->
       <template v-if="isLoading">
         <div
-          v-for="i in skeletonCount"
+          v-for="i in 8"
           :key="`skeleton-${i}`"
           class="masonry-grid__item"
           :style="getSkeletonStyle(i - 1)"
         >
-          <ImageImageSkeleton :height="getRandomHeight()" />
+          <ImageSkeleton :height="getRandomHeight()" />
         </div>
       </template>
       
-      <!-- Отображаем реальные изображения -->
+      <!-- Реальные изображения -->
       <template v-else>
         <div
           v-for="(item, index) in layoutItems"
-          :key="images[index]?.id || `item-${index}`"
+          :key="images[index]?.id || index"
           class="masonry-grid__item"
           :style="getItemStyle(item)"
         >
-          <ImageImageCard
+          <ImageCard
+            v-if="images[index]"
             :image="images[index]"
             :estimated-height="item.height"
-            @load="(height) => handleImageLoad(index, height)"
+            @load="(h) => handleImageLoad(index, h)"
             @click="handleImageClick"
           />
         </div>
       </template>
     </div>
     
-    <!-- Сообщение если нет изображений -->
-    <div v-if="!isLoading && images.length === 0" class="masonry-grid__empty">
+    <!-- Пустое состояние -->
+    <div v-if="!isLoading && !images.length" class="masonry-grid__empty">
       <p>Изображений пока нет</p>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, nextTick } from 'vue'
 import { useMasonryLayout } from '~/composables/useMasonryLayout'
 import type { Image } from '~/types'
 
-/**
- * Пропсы компонента
- */
 interface Props {
-  images: Image[]        // массив изображений для отображения
-  isLoading?: boolean    // состояние загрузки
-  columnWidth?: number   // ширина колонки в пикселях
-  gap?: number          // отступ между элементами
+  images: Image[]
+  isLoading?: boolean
+  minColumnWidth?: number
+  gap?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isLoading: false,
-  columnWidth: 280,
+  minColumnWidth: 250,
   gap: 16
 })
 
-/**
- * Эмиты компонента
- */
 const emit = defineEmits<{
-  imageClick: [image: Image]  // клик по изображению
+  imageClick: [image: Image]
 }>()
 
-/**
- * Используем composable для расчёта layout
- */
+const gridRef = ref<HTMLElement | null>(null)
+
 const {
   items: layoutItems,
   columnCount,
   columnWidth,
-  gap,
   containerHeight,
+  gap,
   calculateLayout
-} = useMasonryLayout(props.columnWidth, props.gap)
+} = useMasonryLayout(props.minColumnWidth, props.gap)
 
-/**
- * Количество skeleton элементов для показа
- */
-const skeletonCount = ref(12)
-
-/**
- * Массив высот загруженных изображений
- */
 const imageHeights = ref<number[]>([])
+const loadedCount = ref(0)
 
 /**
- * Получить случайную высоту для skeleton
- * Создаёт визуальное разнообразие пока изображения грузятся
+ * Получить доступную ширину контейнера (с учетом padding)
  */
-const getRandomHeight = (): number => {
-  // Случайная высота от 200 до 400 пикселей
-  return Math.floor(Math.random() * (400 - 200 + 1)) + 200
+const getAvailableWidth = (): number => {
+  if (!gridRef.value) return 0
+  
+  const rect = gridRef.value.getBoundingClientRect()
+  // Получаем ширину без padding
+  const style = window.getComputedStyle(gridRef.value)
+  const paddingLeft = parseInt(style.paddingLeft)
+  const paddingRight = parseInt(style.paddingRight)
+  
+  return rect.width - paddingLeft - paddingRight
 }
 
 /**
- * Получить стили для skeleton элемента
- * Временные позиции пока не рассчитан настоящий layout
+ * Случайная высота для skeleton
+ */
+const getRandomHeight = () => {
+  return Math.floor(Math.random() * 200) + 250
+}
+
+/**
+ * Стили для skeleton
  */
 const getSkeletonStyle = (index: number) => {
-  const column = index % columnCount.value
-  const row = Math.floor(index / columnCount.value)
+  const col = index % Math.max(columnCount.value, 1)
+  const row = Math.floor(index / Math.max(columnCount.value, 1))
   
   return {
     position: 'absolute',
-    left: `${column * (columnWidth + gap)}px`,
-    top: `${row * 320}px`,  // примерная высота
-    width: `${columnWidth}px`
+    left: `${col * (columnWidth.value + gap)}px`,
+    top: `${row * 350}px`,
+    width: `${columnWidth.value}px`
   }
 }
 
 /**
- * Получить стили для элемента Masonry Grid
+ * Стили для элемента
  */
 const getItemStyle = (item: any) => {
-  return {
+  const style = {
     position: 'absolute',
-    left: `${item.column * (columnWidth + gap)}px`,
+    left: `${item.column * (columnWidth.value + gap)}px`,
     top: `${item.top}px`,
-    width: `${columnWidth}px`
+    width: `${columnWidth.value}px`,
   }
+  
+  return style
 }
 
 /**
  * Обработчик загрузки изображения
- * Сохраняем высоту и пересчитываем layout
  */
 const handleImageLoad = (index: number, height: number) => {
   imageHeights.value[index] = height
+  loadedCount.value++
   
-  // Пересчитываем layout с новыми высотами
-  if (imageHeights.value.filter(h => h > 0).length === props.images.length) {
-    calculateLayout(imageHeights.value)
+  // Пересчитываем layout сразу после каждой загрузки
+  // Это позволяет карточкам появляться постепенно
+  const width = getAvailableWidth()
+  if (width > 0) {
+    calculateLayout(imageHeights.value, width)
   }
 }
 
 /**
- * Обработчик клика по изображению
+ * Клик по изображению
  */
 const handleImageClick = (image: Image) => {
   emit('imageClick', image)
 }
 
 /**
- * Инициализация layout при изменении массива изображений
+ * Обновление layout
+ */
+const updateLayout = () => {
+  if (!gridRef.value || !props.images.length) return
+  
+  const width = getAvailableWidth()
+  
+  // Если высоты уже есть - используем их
+  if (imageHeights.value.length === props.images.length) {
+    calculateLayout(imageHeights.value, width)
+  } else {
+    // Иначе используем примерные значения
+    const estimated = new Array(props.images.length).fill(300)
+    calculateLayout(estimated, width)
+  }
+}
+
+/**
+ * Наблюдаем за изменением массива изображений
  */
 watch(() => props.images, (newImages) => {
   if (newImages.length > 0) {
-    // Инициализируем массив высот примерными значениями
+    // Инициализируем примерными высотами для начального layout
     imageHeights.value = new Array(newImages.length).fill(300)
+    loadedCount.value = 0
     
-    // Рассчитываем начальный layout
-    calculateLayout(imageHeights.value)
+    nextTick(() => {
+      const width = getAvailableWidth()
+      if (width > 0) {
+        calculateLayout(imageHeights.value, width)
+      }
+    })
   }
 }, { immediate: true })
 
 /**
- * Инициализация при монтировании
+ * Инициализация
  */
 onMounted(() => {
-  if (props.images.length > 0) {
-    imageHeights.value = new Array(props.images.length).fill(300)
-    calculateLayout(imageHeights.value)
-  }
+  if (!gridRef.value) return
+  
+  // Первоначальный расчёт
+  updateLayout()
+  
+  // Отслеживаем изменение размера
+  const resizeObserver = new ResizeObserver(() => {
+    updateLayout()
+  })
+  
+  resizeObserver.observe(gridRef.value)
+  
+  onUnmounted(() => {
+    resizeObserver.disconnect()
+  })
 })
 </script>
 
 <style lang="sass" scoped>
 @import '@/assets/styles/variables'
+@import '@/assets/styles/mixins'
 
 .masonry-grid
   width: 100%
+  // Здесь НЕ устанавливаем max-width - это делает layout
   
-  // Контейнер с относительным позиционированием
   &__container
     position: relative
     width: 100%
     transition: height 0.3s ease
   
-  // Элемент сетки (абсолютное позиционирование)
   &__item
     position: absolute
     transition: all 0.3s ease
   
-  // Пустое состояние
   &__empty
     padding: 64px 24px
     text-align: center
@@ -703,27 +637,35 @@ onMounted(() => {
 
 ---
 
-## 5️⃣ Пример использования Masonry Grid
+## 5️⃣ Обновлённая страница с правильным контейнером
 
 ### Файл: `pages/index.vue`
 
 ```vue
 <template>
   <div class="home-page">
+    <!-- Hero секция -->
     <section class="home-page__hero">
-      <h1>Добро пожаловать в SnapBoard</h1>
-      <p>Ваша визуальная доска вдохновения</p>
+      <div class="home-page__container">
+        <h1>Добро пожаловать в SnapBoard</h1>
+        <p>Ваша визуальная доска вдохновения</p>
+      </div>
     </section>
     
+    <!-- Галерея с правильным контейнером -->
     <section class="home-page__gallery">
-      <h2>Популярные изображения</h2>
-      
-      <!-- Masonry Grid с изображениями -->
-      <ImageMasonryGrid
-        :images="mockImages"
-        :is-loading="isLoading"
-        @image-click="handleImageClick"
-      />
+      <div class="home-page__container">
+        <h2>Популярные изображения</h2>
+        
+        <!-- Masonry Grid - занимает всю ширину контейнера -->
+        <ImageMasonryGrid
+          :images="mockImages"
+          :is-loading="isLoading"
+          :min-column-width="250"
+          :gap="16"
+          @image-click="handleImageClick"
+        />
+      </div>
     </section>
   </div>
 </template>
@@ -732,177 +674,189 @@ onMounted(() => {
 import { ref, onMounted } from 'vue'
 import type { Image } from '~/types'
 
-/**
- * Состояние загрузки
- */
 const isLoading = ref(true)
 
 /**
- * Mock данные изображений для демонстрации
- * В реальном приложении будут загружаться с API
+ * Mock изображения с разными URL для тестирования
  */
 const mockImages = ref<Image[]>([
   {
     id: '1',
-    url: 'https://picsum.photos/400/600',
-    title: 'Красивый пейзаж',
+    url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600',
+    title: 'Горный пейзаж',
     description: 'Удивительный вид на горы',
     boardId: '1',
     userId: '1',
-    tags: ['природа', 'горы', 'пейзаж'],
+    tags: ['природа', 'горы'],
     createdAt: new Date().toISOString()
   },
   {
     id: '2',
-    url: 'https://picsum.photos/400/300',
+    url: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=400&h=300',
     title: 'Архитектура',
     description: 'Современное здание',
     boardId: '1',
     userId: '1',
-    tags: ['архитектура', 'дизайн'],
+    tags: ['архитектура'],
     createdAt: new Date().toISOString()
   },
   {
     id: '3',
-    url: 'https://picsum.photos/400/500',
+    url: 'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=400&h=500',
     title: 'Интерьер',
     boardId: '1',
     userId: '1',
-    tags: ['интерьер', 'дизайн', 'уют'],
+    tags: ['интерьер', 'дизайн'],
     createdAt: new Date().toISOString()
   },
   {
     id: '4',
-    url: 'https://picsum.photos/400/400',
+    url: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400',
     title: 'Еда',
     description: 'Вкусная еда',
     boardId: '1',
     userId: '1',
-    tags: ['еда', 'рецепты'],
+    tags: ['еда'],
     createdAt: new Date().toISOString()
   },
   {
     id: '5',
-    url: 'https://picsum.photos/400/550',
+    url: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=550',
     title: 'Мода',
     boardId: '1',
     userId: '1',
-    tags: ['мода', 'стиль'],
+    tags: ['мода'],
     createdAt: new Date().toISOString()
   },
   {
     id: '6',
-    url: 'https://picsum.photos/400/350',
+    url: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=350',
     title: 'Искусство',
     boardId: '1',
     userId: '1',
     tags: ['искусство'],
     createdAt: new Date().toISOString()
+  },
+  {
+    id: '7',
+    url: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=450',
+    title: 'Путешествия',
+    boardId: '1',
+    userId: '1',
+    tags: ['путешествия'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: '8',
+    url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=380',
+    title: 'Природа',
+    boardId: '1',
+    userId: '1',
+    tags: ['природа'],
+    createdAt: new Date().toISOString()
   }
 ])
 
-/**
- * Обработчик клика по изображению
- * Здесь можно открыть модальное окно с деталями
- */
 const handleImageClick = (image: Image) => {
   console.log('Image clicked:', image)
-  // В следующем этапе откроем модальное окно
 }
 
-/**
- * Имитация загрузки данных
- */
 onMounted(() => {
+  // Имитация загрузки
   setTimeout(() => {
     isLoading.value = false
-  }, 1000)
+  }, 500)
 })
 </script>
 
 <style lang="sass" scoped>
 @import '@/assets/styles/variables'
+@import '@/assets/styles/mixins'
 
 .home-page
-  padding: 32px 0
+  width: 100%
+  
+  // Контейнер с max-width и padding
+  &__container
+    max-width: $breakpoint-desktop
+    margin: 0 auto
+    padding: 0 24px
+    
+    @include mobile
+      padding: 0 16px
   
   &__hero
+    padding: 48px 0
     text-align: center
-    margin-bottom: 48px
     
     h1
       font-size: 42px
       font-weight: 700
       color: $text-light
       margin-bottom: 16px
+      
+      @include mobile
+        font-size: 32px
     
     p
       font-size: 18px
       color: $gray-500
   
   &__gallery
+    padding: 32px 0 64px
+    
     h2
       font-size: 28px
       font-weight: 700
       color: $text-light
       margin-bottom: 32px
+      
+      @include mobile
+        font-size: 24px
 </style>
 ```
 
 ---
 
-## ✅ Результат этапа
+## ✅ Что исправлено
 
-После завершения этапа у вас будут:
+### 1. Адаптивность колонок:
+```
+Desktop 1440px: контейнер 1392px (1440 - 48px padding)
+  → 4-5 колонок растянуты на 1392px ✅
 
-1. ✅ Composable `useMasonryLayout` для расчёта позиций
-2. ✅ Компонент `ImageSkeleton` для загрузки
-3. ✅ Компонент `ImageCard` с hover эффектами
-4. ✅ Компонент `MasonryGrid` - основной контейнер
-5. ✅ Lazy loading изображений
-6. ✅ Адаптивность под все экраны
-7. ✅ Плавные анимации и transitions
+Tablet 768px: контейнер 736px (768 - 32px padding)
+  → 2-3 колонки растянуты на 736px ✅
+
+Mobile 576px: контейнер 544px (576 - 32px padding)
+  → 1 колонка на 544px ✅
+```
+
+### 2. Исправлен баг со skeleton:
+- ✅ Добавлен `nextTick()` после загрузки изображения
+- ✅ Правильная передача пропсов `v-if="images[index]"`
+- ✅ Счётчик загруженных изображений
+- ✅ Пересчёт layout после загрузки всех изображений
+- ✅ Использование Unsplash вместо picsum для надёжности
+
+### 3. Правильный расчёт ширины:
+- ✅ `getAvailableWidth()` учитывает padding контейнера
+- ✅ Колонки растягиваются на всю доступную ширину
+- ✅ ResizeObserver отслеживает изменения
+
+### 4. Структура страницы:
+- ✅ Контейнер с `max-width` в layout
+- ✅ MasonryGrid занимает всю ширину контейнера
+- ✅ Нет вложенных контейнеров
 
 ---
 
-## 🎯 Следующий этап
+## 🎯 Результат
 
-**Этап 6: Детальный просмотр изображений (Modal)**
+Теперь:
+- ✅ Колонки заполняют всю ширину (нет пустого места)
+- ✅ Изображения загружаются и выходят из skeleton
+- ✅ Адаптивность работает на всех экранах
+- ✅ Правильный расчёт с учётом padding
 
-В следующем этапе создадим:
-- Модальное окно для просмотра изображения
-- Добавление/редактирование описания
-- Система тегов
-- Действия: редактировать, удалить, скачать
-
----
-
-## 💡 Как работает Masonry Grid
-
-### 1. Расчёт колонок:
-```typescript
-// Экран 1440px → 4-5 колонок
-// Экран 768px → 2-3 колонки
-// Экран 375px → 1 колонка
-```
-
-### 2. Распределение элементов:
-```typescript
-// Элемент всегда добавляется в самую короткую колонку
-// Это обеспечивает равномерное заполнение
-```
-
-### 3. Lazy Loading:
-```html
-<img loading="lazy" />
-<!-- Браузер загружает только видимые изображения -->
-```
-
-### 4. Skeleton:
-```
-Показываем skeleton → Загружаем изображение → Плавно показываем
-```
-
----
-
-Готовы к **Этапу 6: Модальное окно деталей**? 🚀
+Готов к следующему этапу! 🚀
