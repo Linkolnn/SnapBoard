@@ -1,30 +1,25 @@
 <template>
   <div class="url-input">
     <div class="url-input__field">
-      <input
+      <CommonBaseInput
         v-model="url"
         type="url"
-        class="url-input__input"
-        :class="{ 'url-input__input--error': errorMessage }"
         placeholder="Вставьте URL изображения..."
         :disabled="disabled"
+        :error="errorMessage"
         @keydown.enter="handleSubmit"
-        @input="clearError"
+        @update:model-value="clearError"
       />
       
-      <button
-        class="url-input__btn"
+      <CommonBaseButton
+        variant="primary"
         :disabled="disabled || !url.trim()"
+        :loading="isLoading"
         @click="handleSubmit"
       >
-        <span v-if="isLoading" class="url-input__spinner"></span>
-        <span v-else>Добавить</span>
-      </button>
+        Добавить
+      </CommonBaseButton>
     </div>
-
-    <p v-if="errorMessage" class="url-input__error">
-      {{ errorMessage }}
-    </p>
 
     <div v-if="previewUrl" class="url-input__preview">
       <img 
@@ -111,63 +106,11 @@ const handlePreviewError = () => {
   &__field
     display: flex
     gap: 8px
+    align-items: flex-start
 
-  &__input
-    flex: 1
-    padding: 12px 16px
-    font-size: 14px
-    border: 2px solid $gray-200
-    border-radius: $radius
-    background: white
-    transition: all $transition-fast
-
-    &:focus
-      outline: none
-      border-color: $primary-color
-
-    &--error
-      border-color: $error-color
-
-    &::placeholder
-      color: $gray-400
-
-    &:disabled
-      background: $gray-100
-      cursor: not-allowed
-
-  &__btn
-    padding: 12px 24px
-    background: $primary-color
-    color: white
-    border: none
-    border-radius: $radius
-    font-weight: 600
-    cursor: pointer
-    transition: all $transition-fast
-    display: flex
-    align-items: center
-    gap: 8px
-    white-space: nowrap
-
-    &:hover:not(:disabled)
-      background: darken($primary-color, 8%)
-
-    &:disabled
-      opacity: 0.5
-      cursor: not-allowed
-
-  &__spinner
-    width: 16px
-    height: 16px
-    border: 2px solid rgba(white, 0.3)
-    border-top-color: white
-    border-radius: 50%
-    animation: spin 0.8s linear infinite
-
-  &__error
-    margin-top: 8px
-    font-size: 13px
-    color: $error-color
+    // BaseInput занимает всю доступную ширину
+    > :first-child
+      flex: 1
 
   &__preview
     position: relative
@@ -199,8 +142,4 @@ const handlePreviewError = () => {
 
       &:hover
         background: $error-color
-
-@keyframes spin
-  to
-    transform: rotate(360deg)
 </style>

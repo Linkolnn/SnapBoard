@@ -180,12 +180,12 @@ const handleSubmit = async () => {
     h1
       font-size: 28px
       font-weight: 700
-      color: $text-light
+      color: var(--text-primary)
       margin-bottom: 8px
     
     p
       font-size: 16px
-      color: $gray-500
+      color: var(--text-secondary)
   
   // Форма
   &__form
@@ -196,10 +196,10 @@ const handleSubmit = async () => {
   // Ошибка от API
   &__error
     padding: 12px 16px
-    background: rgba(255, 68, 68, 0.1)
-    border: 1px solid $error-color
+    background: var(--error-light)
+    border: 1px solid var(--error-color)
     border-radius: $radius-sm
-    color: $error-color
+    color: var(--error-color)
     font-size: 14px
     text-align: center
   
@@ -208,14 +208,14 @@ const handleSubmit = async () => {
     margin-top: 24px
     text-align: center
     padding-top: 24px
-    border-top: 1px solid $gray-200
+    border-top: 1px solid var(--border-color)
     
     p
       font-size: 14px
-      color: $gray-500
+      color: var(--text-secondary)
     
     a
-      color: $primary-color
+      color: var(--accent-color)
       text-decoration: none
       font-weight: 600
       transition: opacity $transition-fast

@@ -21,6 +21,9 @@
       </nav>
 
       <article class="app-header__actions">
+        <!-- Переключатель темы -->
+        <CommonThemeToggle size="sm" class="app-header__theme-toggle" />
+        
         <!-- Обновлённый поиск -->
         <div v-if="!hideSearch" class="app-header__search">
           <div class="app-header__search-wrapper">
@@ -34,14 +37,15 @@
               @focus="showSearchDropdown = true"
               @blur="handleSearchBlur"
             />
-            <button 
+            <CommonBaseIconButton 
               v-if="searchQuery"
+              variant="ghost"
+              size="sm"
               class="app-header__search-clear"
-              type="button"
               @click="clearSearch"
             >
               ✕
-            </button>
+            </CommonBaseIconButton>
           </div>
           
           <!-- Dropdown с историей поиска -->
@@ -52,7 +56,9 @@
             >
               <div class="app-header__search-dropdown-header">
                 <span>Недавние поиски</span>
-                <button @click.stop="clearSearchHistory">Очистить</button>
+                <CommonBaseButton variant="ghost" size="sm" @click.stop="clearSearchHistory">
+                  Очистить
+                </CommonBaseButton>
               </div>
               <ul>
                 <li 
@@ -126,7 +132,9 @@
     <LayoutMobileMenu 
       v-model="isMobileMenuOpen" 
       :nav-items="visibleNavItems" 
-      :is-authenticated="isAuthenticated" 
+      :is-authenticated="isAuthenticated"
+      :user-name="userName"
+      :user-initials="userInitials"
       @logout="handleLogout"
     />
   </header>
@@ -248,8 +256,8 @@ const clearSearchHistory = () => {
   position: sticky
   top: 0
   z-index: $z-index-dropdown
-  background: white
-  border-bottom: 1px solid $gray-200
+  background: var(--header-bg)
+  border-bottom: 1px solid var(--border-color)
 
   &__container
     max-width: $breakpoint-desktop
@@ -267,13 +275,13 @@ const clearSearchHistory = () => {
     display: flex
     align-items: center
     text-decoration: none
-    color: $text-light
+    color: var(--text-primary)
     font-weight: 700
     font-size: 24px
     transition: color $transition-fast
     
     &:hover
-      color: $primary-color
+      color: var(--accent-color)
 
   &__logo-icon
     width: 32px
@@ -295,17 +303,17 @@ const clearSearchHistory = () => {
     gap: 15px
 
   &__link
-    color: $text-light
+    color: var(--text-primary)
     text-decoration: none
     font-weight: 500
     transition: color $transition-fast
     position: relative
     
     &:hover
-      color: $primary-color
+      color: var(--accent-color)
 
     &.router-link-active
-      color: $primary-color
+      color: var(--accent-color)
       
       &::after
         content: ''
@@ -314,12 +322,16 @@ const clearSearchHistory = () => {
         left: 0
         right: 0
         height: 2px
-        background: $primary-color
+        background: var(--accent-color)
 
   &__actions
     display: flex
     align-items: center
     gap: 16px
+  
+  &__theme-toggle
+    @include mobile
+      display: none
 
   // Обновлённые стили поиска
   &__search
@@ -330,62 +342,41 @@ const clearSearchHistory = () => {
     align-items: center
     gap: 8px
     padding: 8px 16px
-    background: $gray-100
+    background: var(--bg-secondary)
     border: 2px solid transparent
     border-radius: $radius
     transition: all $transition-fast
     
     &:focus-within
-      background: white
-      border-color: $primary-color
+      background: var(--bg-primary)
+      border-color: var(--accent-color)
   
   &__search-icon
     font-size: 14px
-    color: $gray-400
+    color: var(--text-muted)
   
   &__search-inp
     max-width: 200px
     width: 100%
     background: transparent
     font-size: 14px
-    color: $text-light
+    color: var(--text-primary)
     outline: none
     
-    @include tablet
-      max-width: 150px
-    
-    @include mobile
-      max-width: 100px
-    
     &::placeholder
-      color: $gray-400
+      color: var(--text-muted)
   
   &__search-clear
-    display: flex
-    align-items: center
-    justify-content: center
-    width: 20px
-    height: 20px
-    background: $gray-300
-    border: none
-    border-radius: 50%
-    font-size: 10px
-    color: $gray-600
-    cursor: pointer
     flex-shrink: 0
-    
-    &:hover
-      background: $gray-400
-      color: white
   
   &__search-dropdown
     position: absolute
     top: calc(100% + 8px)
     left: 0
     right: 0
-    background: white
+    background: var(--bg-primary)
     border-radius: $radius
-    box-shadow: $shadow-lg
+    box-shadow: var(--shadow-lg)
     z-index: $z-index-dropdown
     overflow: hidden
     
@@ -394,18 +385,9 @@ const clearSearchHistory = () => {
       justify-content: space-between
       align-items: center
       padding: 12px 16px
-      border-bottom: 1px solid $gray-100
+      border-bottom: 1px solid var(--border-light)
       font-size: 13px
-      color: $gray-500
-      
-      button
-        background: none
-        border: none
-        color: $primary-color
-        cursor: pointer
-        
-        &:hover
-          text-decoration: underline
+      color: var(--text-muted)
     
     ul
       list-style: none
@@ -423,10 +405,10 @@ const clearSearchHistory = () => {
       transition: background $transition-fast
       
       &:hover
-        background: $gray-50
+        background: var(--bg-hover)
       
       span:first-child
-        color: $gray-400
+        color: var(--text-muted)
 
   &__btns
     display: flex
@@ -440,24 +422,27 @@ const clearSearchHistory = () => {
   
   &__user
     position: relative
+    
+    @include laptop
+      display: none
   
   &__user-menu
     display: flex
     align-items: center
     gap: 8px
     padding: 6px 12px
-    background: $gray-100
+    background: var(--bg-secondary)
     border-radius: $radius-full
     cursor: pointer
     transition: all $transition-fast
     
     &:hover
-      background: $gray-200
+      background: var(--bg-tertiary)
   
   &__avatar
     width: 32px
     height: 32px
-    background: $primary-color
+    background: var(--accent-color)
     color: white
     border-radius: 50%
     display: flex
@@ -469,14 +454,14 @@ const clearSearchHistory = () => {
   &__user-name
     font-size: 14px
     font-weight: 500
-    color: $text-light
+    color: var(--text-primary)
     
     @include tablet
       display: none
   
   &__dropdown-icon
     font-size: 10px
-    color: $gray-400
+    color: var(--text-muted)
     transition: transform $transition-fast
   
   &__dropdown
@@ -484,9 +469,9 @@ const clearSearchHistory = () => {
     top: calc(100% + 8px)
     right: 0
     min-width: 200px
-    background: white
+    background: var(--bg-primary)
     border-radius: $radius
-    box-shadow: $shadow-lg
+    box-shadow: var(--shadow-lg)
     padding: 8px 0
     z-index: $z-index-dropdown
   
@@ -499,24 +484,24 @@ const clearSearchHistory = () => {
     background: none
     border: none
     font-size: 14px
-    color: $text-light
+    color: var(--text-primary)
     text-decoration: none
     cursor: pointer
     transition: background $transition-fast
     
     &:hover
-      background: $gray-100
+      background: var(--bg-secondary)
     
     &--danger
-      color: $error-color
+      color: var(--error-color)
       
       &:hover
-        background: rgba($error-color, 0.1)
+        background: var(--error-light)
   
   &__dropdown-divider
     margin: 8px 0
     border: none
-    border-top: 1px solid $gray-200
+    border-top: 1px solid var(--border-color)
 
   &__burger
     display: none
@@ -535,12 +520,12 @@ const clearSearchHistory = () => {
   &__burger-line
     width: 100%
     height: 3px
-    background: $text-light
+    background: var(--text-primary)
     border-radius: 2px
     transition: all $transition-fast
 
     .app-header__burger:hover &
-      background: $primary-color
+      background: var(--accent-color)
 
 // Анимация dropdown
 .dropdown-enter-active, .dropdown-leave-active

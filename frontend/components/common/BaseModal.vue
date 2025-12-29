@@ -73,7 +73,7 @@ watch(
   left: 0
   right: 0
   bottom: 0
-  background: rgba(0, 0, 0, 0.6) // полупрозрачный чёрный
+  background: var(--modal-overlay)
   display: flex
   align-items: center
   justify-content: center
@@ -82,57 +82,52 @@ watch(
 
 // Само модальное окно
 .modal
-  background: white
+  background: var(--modal-bg)
   border-radius: $radius
   max-width: 600px
   width: 100%
-  max-height: 90vh // не больше 90% высоты экрана
-  overflow-y: auto // прокрутка если контент большой
-  box-shadow: $shadow-lg
+  max-height: 90vh
+  overflow-y: auto
+  box-shadow: var(--shadow-lg)
   
-  // На мобильных занимает почти весь экран
   @include mobile
     max-width: 95%
     max-height: 95vh
 
-  // Шапка модального окна
   &__header
     display: flex
     align-items: center
     justify-content: space-between
     padding: 24px
-    border-bottom: 1px solid $gray-200
+    border-bottom: 1px solid var(--border-color)
 
   &__title
     font-size: 24px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
 
-  // Кнопка закрытия (крестик)
   &__close
-    border: 2px solid $primary-color
+    border: 2px solid var(--accent-color)
     width: 40px
     height: 40px
     display: flex
     align-items: center
     justify-content: center
     border-radius: 50%
-    color: $primary-color
-    background: $background-light
+    color: var(--accent-color)
+    background: var(--bg-primary)
     transition: all $transition-fast
     
     &:hover
-        background: $primary-color
-        color: $gray-100
+      background: var(--accent-color)
+      color: var(--text-inverse)
 
-  // Контент модального окна
   &__body
     padding: 24px
 
-  // Footer с кнопками
   &__footer
     padding: 24px
-    border-top: 1px solid $gray-200
+    border-top: 1px solid var(--border-color)
     display: flex
     gap: 16px
     justify-content: flex-end

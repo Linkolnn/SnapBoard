@@ -9,13 +9,7 @@
       </article>
     </main>
     
-    <footer class="auth-layout__footer">
-      <p>
-        <NuxtLink to="/privacy">Конфиденциальность</NuxtLink>
-        •
-        <NuxtLink to="/terms">Условия использования</NuxtLink>
-      </p>
-    </footer>
+    <LayoutFooter compact />
   </div>
 </template>
 
@@ -27,7 +21,7 @@
   min-height: 100vh
   display: flex
   flex-direction: column
-  background: linear-gradient(135deg, $gray-100 0%, white 100%)
+  background: var(--bg-secondary)
   
   // Main content
   &__main
@@ -42,31 +36,14 @@
   
   // Card
   &__card
-    background: white
+    background: var(--card-bg)
     border-radius: $radius-lg
-    box-shadow: $shadow-lg
+    box-shadow: var(--shadow-lg)
     padding: 48px
     width: 100%
     max-width: 450px
+    border: 1px solid var(--card-border)
     
     @include mobile
       padding: 32px 24px
-  
-  // Footer
-  &__footer
-    padding: 24px
-    text-align: center
-    
-    p
-      font-size: 14px
-      color: $gray-500
-      margin: 0
-    
-    a
-      color: $gray-500
-      text-decoration: none
-      transition: color $transition-fast
-      
-      &:hover
-        color: $primary-color
 </style>

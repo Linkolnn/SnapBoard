@@ -6,32 +6,41 @@
         class="fullscreen-modal"
         @click.self="handleClose"
       >
-        <!-- Кнопка закрытия -->
-        <button class="fullscreen-modal__close" @click="handleClose">
-          ✕
-        </button>
-        
-        <!-- Навигация -->
-        <button
-          v-if="viewContext.hasPrev"
-          class="fullscreen-modal__nav fullscreen-modal__nav--prev"
-          @click="handlePrev"
-        >
-          ‹
-        </button>
-        
-        <button
-          v-if="viewContext.hasNext"
-          class="fullscreen-modal__nav fullscreen-modal__nav--next"
-          @click="handleNext"
-        >
-          ›
-        </button>
-        
         <!-- Основной контент -->
         <div class="fullscreen-modal__content" ref="contentRef">
           <!-- Изображение на весь экран -->
           <div class="fullscreen-modal__image-section">
+            <!-- Кнопка закрытия -->
+            <CommonBaseIconButton 
+              class="fullscreen-modal__close" 
+              variant="ghost"
+              size="lg"
+              @click="handleClose"
+            >
+              ✕
+            </CommonBaseIconButton>
+            
+            <!-- Навигация -->
+            <CommonBaseIconButton
+              v-if="viewContext.hasPrev"
+              class="fullscreen-modal__nav fullscreen-modal__nav--prev"
+              variant="ghost"
+              size="lg"
+              @click="handlePrev"
+            >
+              ‹
+            </CommonBaseIconButton>
+            
+            <CommonBaseIconButton
+              v-if="viewContext.hasNext"
+              class="fullscreen-modal__nav fullscreen-modal__nav--next"
+              variant="ghost"
+              size="lg"
+              @click="handleNext"
+            >
+              ›
+            </CommonBaseIconButton>
+            
             <img
               :src="image.url"
               :alt="image.title || 'Image'"
@@ -45,8 +54,8 @@
               <h3 class="fullscreen-modal__title">{{ image.title || 'Без названия' }}</h3>
               <div v-if="image.tags?.length" class="fullscreen-modal__tags">
                 <span 
-                  v-for="tag in image.tags.slice(0, 5)" 
-                  :key="tag"
+                  v-for="(tag, index) in image.tags.slice(0, 5)" 
+                  :key="`tag-${index}-${tag}`"
                   class="fullscreen-modal__tag"
                 >
                   #{{ tag }}
@@ -55,27 +64,32 @@
             </div>
             
             <div class="fullscreen-modal__actions-right">
-              <button 
+              <CommonBaseIconButton 
+                :variant="isFavoriteImage ? 'danger' : 'ghost'"
+                size="lg"
                 class="fullscreen-modal__btn"
-                :class="{ 'fullscreen-modal__btn--active': isFavoriteImage }"
                 @click="handleToggleFavorite"
               >
-                <span>{{ isFavoriteImage ? '❤️' : '🤍' }}</span>
-              </button>
+                {{ isFavoriteImage ? '🤍' : '❤️' }}
+              </CommonBaseIconButton>
               
-              <button 
+              <CommonBaseIconButton 
+                variant="ghost"
+                size="lg"
                 class="fullscreen-modal__btn"
-                @click="openSaveModal"
+                @click="handleOpenSaveModal"
               >
-                <span>📌</span>
-              </button>
+                📌
+              </CommonBaseIconButton>
               
-              <button 
+              <CommonBaseIconButton 
+                variant="ghost"
+                size="lg"
                 class="fullscreen-modal__btn"
                 @click="shareImage"
               >
-                <span>↗️</span>
-              </button>
+                ↗️
+              </CommonBaseIconButton>
             </div>
           </div>
           
@@ -91,6 +105,7 @@
             />
             
             <div v-else-if="isLoadingRecommendations" class="fullscreen-modal__loading">
+              <CommonBaseLoader size="medium" />
               <span>Загрузка рекомендаций...</span>
             </div>
             
@@ -99,6 +114,16 @@
             </div>
           </div>
         </div>
+
+        <!-- Модал сохранения на доску -->
+        <ImageSaveToBoardModal
+          :is-open="isSaveModalOpen"
+          :image-id="image?.id || null"
+          :saved-board-ids="savedBoardIds"
+          @close="isSaveModalOpen = false"
+          @save="handleSaveToBoard"
+          @remove="handleRemoveFromBoard"
+        />
       </div>
     </Transition>
   </Teleport>
@@ -108,6 +133,8 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Image, ImageViewContext } from '~/types/image'
 import { useFavorites } from '~/composables/useFavorites'
+import { useAuthActions } from '~/composables/useAuthActions'
+import { useToast } from '~/composables/useToast'
 
 interface Props {
   isOpen: boolean
@@ -126,10 +153,14 @@ const emit = defineEmits<{
 }>()
 
 const { isFavorite, toggleFavorite } = useFavorites()
+const { requireAuth, checkAuth } = useAuthActions()
+const toast = useToast()
 
 const contentRef = ref<HTMLElement | null>(null)
 const isLoadingRecommendations = ref(false)
 const recommendations = ref<Image[]>([])
+const isSaveModalOpen = ref(false)
+const savedBoardIds = ref<string[]>([])
 
 // Проверка избранного
 const isFavoriteImage = computed(() => {
@@ -229,31 +260,79 @@ const handlePrev = () => {
 }
 
 const handleToggleFavorite = () => {
-  if (props.image) {
-    toggleFavorite(props.image.id)
+  if (!props.image) return
+  
+  // Проверка авторизации
+  requireAuth(() => {
+    // Проверяем состояние ДО переключения
+    const wasInFavorites = isFavorite(props.image!.id)
+    toggleFavorite(props.image!.id)
+    
+    if (wasInFavorites) {
+      toast.info('Удалено из избранного')
+    } else {
+      toast.success('Добавлено в избранное')
+    }
+  })
+}
+
+const handleOpenSaveModal = () => {
+  if (!props.image) return
+  
+  // Проверка авторизации
+  if (!checkAuth()) {
+    requireAuth(() => {})
+    return
+  }
+  
+  isSaveModalOpen.value = true
+}
+
+const handleSaveToBoard = (boardId: string) => {
+  // TODO: API call to save image to board
+  if (!savedBoardIds.value.includes(boardId)) {
+    savedBoardIds.value.push(boardId)
   }
 }
 
-const openSaveModal = () => {
-  console.log('Save to board:', props.image?.id)
-  // TODO: Открыть модал выбора доски
+const handleRemoveFromBoard = (boardId: string) => {
+  // TODO: API call to remove image from board
+  savedBoardIds.value = savedBoardIds.value.filter(id => id !== boardId)
 }
 
 const shareImage = async () => {
   if (!props.image) return
   
+  const shareUrl = `${window.location.origin}/image/${props.image.id}`
+  
+  // Пробуем Web Share API
   if (navigator.share) {
     try {
       await navigator.share({
         title: props.image.title || 'SnapBoard Image',
-        url: props.image.url
+        text: props.image.description || 'Посмотрите это изображение на SnapBoard',
+        url: shareUrl
       })
-    } catch (err) {
-      console.log('Share cancelled')
+      toast.success('Поделились успешно')
+    } catch (err: any) {
+      // Пользователь отменил или ошибка
+      if (err.name !== 'AbortError') {
+        // Fallback на копирование
+        await copyToClipboard(shareUrl)
+      }
     }
   } else {
-    await navigator.clipboard.writeText(props.image.url)
-    // TODO: Показать toast "Ссылка скопирована"
+    // Fallback на копирование
+    await copyToClipboard(shareUrl)
+  }
+}
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast.success('Ссылка скопирована')
+  } catch (err) {
+    toast.error('Не удалось скопировать ссылку')
   }
 }
 
@@ -294,94 +373,74 @@ onUnmounted(() => {
 .fullscreen-modal
   position: fixed
   inset: 0
-  background: rgba(0, 0, 0, 0.95)
+  background: var(--bg-primary)
   z-index: $z-index-modal
   overflow-y: auto
-  
-  &__close
-    position: fixed
-    top: 16px
-    right: 16px
-    width: 48px
-    height: 48px
-    background: rgba(255, 255, 255, 0.1)
-    border: none
-    border-radius: 50%
-    color: white
-    font-size: 24px
-    cursor: pointer
-    transition: all $transition-fast
-    z-index: 10
-    display: flex
-    align-items: center
-    justify-content: center
-    
-    &:hover
-      background: rgba(255, 255, 255, 0.2)
-    
-    @include mobile
-      width: 40px
-      height: 40px
-      top: 12px
-      right: 12px
-  
-  &__nav
-    position: fixed
-    top: 40%
-    transform: translateY(-50%)
-    width: 56px
-    height: 56px
-    background: rgba(255, 255, 255, 0.1)
-    border: none
-    border-radius: 50%
-    color: white
-    font-size: 32px
-    cursor: pointer
-    transition: all $transition-fast
-    z-index: 10
-    display: flex
-    align-items: center
-    justify-content: center
-    
-    &:hover
-      background: rgba(255, 255, 255, 0.2)
-    
-    &--prev
-      left: 16px
-    
-    &--next
-      right: 16px
-    
-    @include mobile
-      width: 44px
-      height: 44px
-      font-size: 24px
-      
-      &--prev
-        left: 8px
-      
-      &--next
-        right: 8px
   
   &__content
     max-width: 1200px
     margin: 0 auto
-    padding: 80px 80px 40px
+    padding: 40px 80px
     
     @include tablet
-      padding: 70px 40px 32px
+      padding: 32px 40px
     
     @include mobile
-      padding: 60px 16px 24px
+      padding: 24px 16px
   
   &__image-section
+    position: relative
     display: flex
     justify-content: center
     margin-bottom: 24px
   
+  &__close
+    position: absolute
+    top: 8px
+    right: 8px
+    z-index: 10
+    color: var(--text-primary)
+    background: var(--bg-secondary)
+    border-radius: $radius-full
+    
+    &:hover
+      background: var(--bg-tertiary)
+    
+    @include mobile
+      top: 4px
+      right: 4px
+  
+  &__nav
+    position: absolute
+    top: 50%
+    transform: translateY(-50%)
+    z-index: 10
+    color: var(--text-primary)
+    background: var(--bg-secondary)
+    border-radius: $radius-full
+    font-size: 32px
+    
+    &:hover
+      background: var(--bg-tertiary)
+    
+    &--prev
+      left: 8px
+    
+    &--next
+      right: 8px
+    
+    @include mobile
+      font-size: 24px
+      
+      &--prev
+        left: 4px
+      
+      &--next
+        right: 4px
+  
   &__image
     max-width: 100%
-    // max-height: 70vh
+    max-height: 70vh
     object-fit: contain
     border-radius: $radius
   
@@ -390,7 +449,7 @@ onUnmounted(() => {
     justify-content: space-between
     align-items: center
     padding: 20px 24px
-    background: rgba(255, 255, 255, 0.05)
+    background: var(--bg-secondary)
     border-radius: $radius
     margin-bottom: 32px
     gap: 16px
@@ -415,7 +474,7 @@ onUnmounted(() => {
       flex-wrap: wrap
   
   &__title
-    color: white
+    color: var(--text-primary)
     font-size: 20px
     font-weight: 600
     margin: 0 0 8px
@@ -433,42 +492,21 @@ onUnmounted(() => {
       justify-content: center
   
   &__tag
-    color: $gray-400
+    color: var(--text-muted)
     font-size: 14px
     
     @include mobile
       font-size: 12px
   
   &__btn
-    display: flex
-    align-items: center
-    gap: 8px
-    padding: 12px 20px
-    background: rgba(255, 255, 255, 0.1)
-    border: none
-    border-radius: $radius
-    color: white
-    font-size: 14px
-    font-weight: 500
-    cursor: pointer
-    transition: all $transition-fast
-    
-    &:hover
-      background: rgba(255, 255, 255, 0.2)
-    
-    &--active
-      background: $error-color
-      
-      &:hover
-        background: darken($error-color, 10%)
+    color: var(--text-primary)
     
     @include mobile
-      padding: 10px 16px
       font-size: 13px
   
   &__recommendations
     h4
-      color: white
+      color: var(--text-primary)
       font-size: 24px
       font-weight: 600
       margin-bottom: 24px
@@ -479,9 +517,13 @@ onUnmounted(() => {
   
   &__loading,
   &__no-recommendations
+    display: flex
+    flex-direction: column
+    align-items: center
+    gap: 16px
     text-align: center
     padding: 48px 24px
-    color: $gray-400
+    color: var(--text-muted)
     font-size: 16px
 
 // Анимации

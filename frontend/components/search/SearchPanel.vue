@@ -16,7 +16,9 @@
     </div>
     
     <div v-if="availableTags.length > 0" class="search-panel__filters">
-      <SearchTagFilter
+      <CommonBaseTagInput
+        mode="filter"
+        label="Теги"
         :tags="availableTags"
         :selected-tags="selectedTags"
         @toggle="toggleTag"
@@ -77,9 +79,10 @@ const handleSearch = (searchQuery: string) => {
   flex-direction: column
   gap: 16px
   padding: 20px
-  background: white
+  background: var(--card-bg)
   border-radius: $radius-lg
-  box-shadow: $shadow-sm
+  box-shadow: var(--shadow-sm)
+  border: 1px solid var(--card-border)
 
   @include mobile
     padding: 16px
@@ -94,14 +97,14 @@ const handleSearch = (searchQuery: string) => {
 
   &__filters
     padding-top: 16px
-    border-top: 1px solid $gray-100
+    border-top: 1px solid var(--border-light)
 
   &__status
     display: flex
     justify-content: space-between
     align-items: center
     padding-top: 12px
-    border-top: 1px solid $gray-100
+    border-top: 1px solid var(--border-light)
 
     @include mobile
       flex-direction: column
@@ -110,12 +113,12 @@ const handleSearch = (searchQuery: string) => {
 
   &__results
     font-size: 14px
-    color: $gray-500
+    color: var(--text-secondary)
 
   &__clear-all
     background: none
     border: none
-    color: $primary-color
+    color: var(--accent-color)
     font-size: 14px
     font-weight: 500
     cursor: pointer

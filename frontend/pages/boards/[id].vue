@@ -284,7 +284,7 @@ watch(boardId, async (newId) => {
 
 .board-page
   min-height: 100vh
-  background: $gray-50
+  background: var(--bg-primary)
   padding: 32px 0
 
   &__container
@@ -301,8 +301,8 @@ watch(boardId, async (newId) => {
   &__spinner
     width: 48px
     height: 48px
-    border: 3px solid $gray-200
-    border-top-color: $primary-color
+    border: 3px solid var(--border-color)
+    border-top-color: var(--accent-color)
     border-radius: 50%
     margin: 0 auto 16px
     animation: spin 1s linear infinite
@@ -313,17 +313,17 @@ watch(boardId, async (newId) => {
       margin-bottom: 16px
     h2
       font-size: 24px
-      color: $text-light
+      color: var(--text-primary)
       margin-bottom: 8px
     p
-      color: $gray-400
+      color: var(--text-muted)
       margin-bottom: 24px
 
   &__back-btn
     display: inline-block
     padding: 12px 24px
-    background: $primary-color
-    color: white
+    background: var(--accent-color)
+    color: var(--text-inverse)
     text-decoration: none
     border-radius: $radius
     font-weight: 600
@@ -335,13 +335,13 @@ watch(boardId, async (newId) => {
     display: inline-flex
     align-items: center
     gap: 8px
-    color: $gray-500
+    color: var(--text-secondary)
     text-decoration: none
     font-size: 14px
     margin-bottom: 16px
     transition: color $transition-fast
     &:hover
-      color: $primary-color
+      color: var(--accent-color)
 
   &__info
     margin-bottom: 24px
@@ -356,20 +356,20 @@ watch(boardId, async (newId) => {
   &__title
     font-size: 32px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
     @include mobile
       font-size: 28px
 
   &__badge
     padding: 6px 12px
-    background: $gray-100
+    background: var(--bg-tertiary)
     border-radius: $radius-full
     font-size: 14px
-    color: $gray-600
+    color: var(--text-secondary)
 
   &__desc
     font-size: 16px
-    color: $gray-500
+    color: var(--text-secondary)
     margin-bottom: 12px
     max-width: 600px
 
@@ -377,7 +377,7 @@ watch(boardId, async (newId) => {
     display: flex
     gap: 8px
     font-size: 14px
-    color: $gray-400
+    color: var(--text-muted)
 
   &__actions
     display: flex
@@ -390,25 +390,25 @@ watch(boardId, async (newId) => {
     align-items: center
     gap: 8px
     padding: 10px 20px
-    background: white
-    color: $text-light
-    border: 2px solid $gray-200
+    background: var(--card-bg)
+    color: var(--text-primary)
+    border: 2px solid var(--border-color)
     border-radius: $radius
     font-size: 14px
     font-weight: 600
     cursor: pointer
     transition: all $transition-fast
     &:hover
-      border-color: $primary-color
-      color: $primary-color
+      border-color: var(--accent-color)
+      color: var(--accent-color)
     &--primary
-      background: $primary-color
-      color: white
-      border-color: $primary-color
+      background: var(--accent-color)
+      color: var(--text-inverse)
+      border-color: var(--accent-color)
       &:hover
-        background: darken($primary-color, 8%)
-        border-color: darken($primary-color, 8%)
-        color: white
+        background: var(--accent-hover)
+        border-color: var(--accent-hover)
+        color: var(--text-inverse)
 
   &__search
     margin-bottom: 24px
@@ -419,17 +419,18 @@ watch(boardId, async (newId) => {
   &__empty, &__no-results
     text-align: center
     padding: 64px 24px
-    background: white
+    background: var(--card-bg)
     border-radius: $radius-lg
+    border: 1px solid var(--card-border)
     &-icon
       font-size: 64px
       margin-bottom: 16px
     h2
       font-size: 24px
-      color: $text-light
+      color: var(--text-primary)
       margin-bottom: 8px
     p
-      color: $gray-400
+      color: var(--text-muted)
       margin-bottom: 24px
 
   &__upload-btn, &__clear-btn
@@ -437,8 +438,8 @@ watch(boardId, async (newId) => {
     align-items: center
     gap: 8px
     padding: 12px 24px
-    background: $primary-color
-    color: white
+    background: var(--accent-color)
+    color: var(--text-inverse)
     border: none
     border-radius: $radius
     font-size: 16px
@@ -448,7 +449,7 @@ watch(boardId, async (newId) => {
   &__modal
     position: fixed
     inset: 0
-    background: rgba(0, 0, 0, 0.5)
+    background: var(--modal-overlay)
     display: flex
     align-items: center
     justify-content: center
@@ -457,7 +458,7 @@ watch(boardId, async (newId) => {
 
     &-content
       position: relative
-      background: white
+      background: var(--modal-bg)
       border-radius: $radius-lg
       padding: 32px
       max-width: 500px
@@ -470,10 +471,11 @@ watch(boardId, async (newId) => {
       width: 32px
       height: 32px
       border: none
-      background: $gray-100
+      background: var(--bg-tertiary)
       border-radius: 50%
       font-size: 18px
       cursor: pointer
+      color: var(--text-primary)
 
 .modal-enter-active, .modal-leave-active
   transition: all 0.3s ease

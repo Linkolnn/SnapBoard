@@ -1,20 +1,40 @@
 <template>
   <div class="image-actions">
-    <button class="image-actions__btn" title="Редактировать" @click="$emit('edit')">
+    <CommonBaseButton 
+      variant="secondary" 
+      full-width 
+      title="Редактировать" 
+      @click="$emit('edit')"
+    >
       ✏️ Редактировать
-    </button>
+    </CommonBaseButton>
     
-    <button class="image-actions__btn" title="Скачать" @click="handleDownload">
+    <CommonBaseButton 
+      variant="secondary" 
+      full-width 
+      title="Скачать" 
+      @click="handleDownload"
+    >
       📥 Скачать
-    </button>
+    </CommonBaseButton>
     
-    <button class="image-actions__btn" title="Открыть в новой вкладке" @click="handleOpenInNewTab">
+    <CommonBaseButton 
+      variant="secondary" 
+      full-width 
+      title="Открыть в новой вкладке" 
+      @click="handleOpenInNewTab"
+    >
       🔗 Открыть
-    </button>
+    </CommonBaseButton>
     
-    <button class="image-actions__btn image-actions__btn--danger" title="Удалить" @click="$emit('delete')">
+    <CommonBaseButton 
+      variant="danger" 
+      full-width 
+      title="Удалить" 
+      @click="$emit('delete')"
+    >
       🗑️ Удалить
-    </button>
+    </CommonBaseButton>
   </div>
 </template>
 
@@ -65,29 +85,4 @@ const handleOpenInNewTab = () => {
   display: flex
   flex-direction: column
   gap: 8px
-
-  &__btn
-    display: flex
-    align-items: center
-    gap: 8px
-    width: 100%
-    padding: 12px 16px
-    background: $gray-100
-    border: none
-    border-radius: $radius
-    font-size: 14px
-    font-weight: 500
-    color: $text-light
-    cursor: pointer
-    transition: all $transition-fast
-    text-align: left
-
-    &:hover
-      background: $gray-200
-
-    &--danger
-      color: $error-color
-
-      &:hover
-        background: rgba($error-color, 0.1)
 </style>

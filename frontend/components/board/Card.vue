@@ -58,16 +58,17 @@ const handleDelete = () => emit('delete', props.board)
 
 .board-card
   position: relative
-  background: white
+  background: var(--card-bg)
   border-radius: $radius-lg
   overflow: hidden
   cursor: pointer
   transition: all $transition-normal
-  box-shadow: $shadow-sm
+  box-shadow: var(--shadow-sm)
+  border: 1px solid var(--card-border)
   
   &:hover
     transform: translateY(-4px)
-    box-shadow: $shadow-lg
+    box-shadow: var(--shadow-lg)
     .board-card__actions
       opacity: 1
   
@@ -75,7 +76,7 @@ const handleDelete = () => emit('delete', props.board)
     position: relative
     width: 100%
     height: 180px
-    background: $gray-100
+    background: var(--bg-tertiary)
     overflow: hidden
   
   &__img
@@ -92,7 +93,7 @@ const handleDelete = () => emit('delete', props.board)
     display: flex
     align-items: center
     justify-content: center
-    background: linear-gradient(135deg, $gray-100, $gray-200)
+    background: var(--bg-tertiary)
     &-icon
       font-size: 48px
       opacity: 0.5
@@ -113,7 +114,7 @@ const handleDelete = () => emit('delete', props.board)
   &__title
     font-size: 18px
     font-weight: 600
-    color: $text-light
+    color: var(--text-primary)
     margin-bottom: 8px
     display: -webkit-box
     -webkit-line-clamp: 1
@@ -122,7 +123,7 @@ const handleDelete = () => emit('delete', props.board)
   
   &__desc
     font-size: 14px
-    color: $gray-500
+    color: var(--text-secondary)
     margin-bottom: 12px
     display: -webkit-box
     -webkit-line-clamp: 2
@@ -134,7 +135,7 @@ const handleDelete = () => emit('delete', props.board)
     justify-content: space-between
     align-items: center
     font-size: 13px
-    color: $gray-400
+    color: var(--text-muted)
   
   &__actions
     position: absolute
@@ -150,17 +151,17 @@ const handleDelete = () => emit('delete', props.board)
     height: 36px
     border: none
     border-radius: 50%
-    background: white
+    background: var(--card-bg)
     cursor: pointer
     display: flex
     align-items: center
     justify-content: center
     font-size: 16px
     transition: all $transition-fast
-    box-shadow: $shadow-sm
+    box-shadow: var(--shadow-sm)
     
     &:hover
       transform: scale(1.1)
     &--danger:hover
-      background: $error
+      background: var(--error-color)
 </style>

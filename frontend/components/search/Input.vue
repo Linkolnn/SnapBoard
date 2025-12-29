@@ -14,16 +14,17 @@
       @keydown.escape="handleClear"
     />
     
-    <button
+    <CommonBaseIconButton
       v-if="localQuery"
-      class="search-input__clear"
-      type="button"
+      variant="ghost"
+      size="sm"
+      title="Очистить"
       @click="handleClear"
     >
       ✕
-    </button>
+    </CommonBaseIconButton>
     
-    <div v-if="isLoading" class="search-input__loader"></div>
+    <CommonBaseLoader v-if="isLoading" size="small" />
     
     <!-- Dropdown с историей -->
     <Transition name="dropdown">
@@ -33,12 +34,13 @@
       >
         <div class="search-input__dropdown-header">
           <span>Недавние поиски</span>
-          <button 
-            class="search-input__dropdown-clear"
+          <CommonBaseButton 
+            variant="ghost"
+            size="sm"
             @click.stop="$emit('clear-history')"
           >
             Очистить
-          </button>
+          </CommonBaseButton>
         </div>
         
         <ul class="search-input__dropdown-list">
@@ -50,12 +52,14 @@
           >
             <span class="search-input__dropdown-icon">🕐</span>
             <span class="search-input__dropdown-text">{{ item.query }}</span>
-            <button
+            <CommonBaseIconButton
+              variant="ghost"
+              size="sm"
               class="search-input__dropdown-remove"
               @click.stop="$emit('remove-history', item.id)"
             >
               ✕
-            </button>
+            </CommonBaseIconButton>
           </li>
         </ul>
       </div>
@@ -158,19 +162,19 @@ defineExpose({ focus })
   align-items: center
   gap: 12px
   padding: 12px 16px
-  background: white
-  border: 2px solid $gray-200
+  background: var(--input-bg)
+  border: 2px solid var(--input-border)
   border-radius: $radius
   transition: all $transition-fast
   flex: 1
 
   &--focused
-    border-color: $primary-color
-    box-shadow: 0 0 0 3px rgba($primary-color, 0.1)
+    border-color: var(--input-focus-border)
+    box-shadow: 0 0 0 3px var(--accent-light)
 
   &__icon
     font-size: 18px
-    color: $gray-400
+    color: var(--text-muted)
     flex-shrink: 0
 
   &__field
@@ -178,47 +182,21 @@ defineExpose({ focus })
     border: none
     background: transparent
     font-size: 15px
-    color: $text-light
+    color: var(--text-primary)
     outline: none
 
     &::placeholder
-      color: $gray-400
-
-  &__clear
-    display: flex
-    align-items: center
-    justify-content: center
-    width: 24px
-    height: 24px
-    background: $gray-100
-    border: none
-    border-radius: 50%
-    color: $gray-500
-    font-size: 12px
-    cursor: pointer
-    transition: all $transition-fast
-
-    &:hover
-      background: $gray-200
-      color: $text-light
-
-  &__loader
-    width: 20px
-    height: 20px
-    border: 2px solid $gray-200
-    border-top-color: $primary-color
-    border-radius: 50%
-    animation: spin 0.8s linear infinite
+      color: var(--text-muted)
 
   &__dropdown
     position: absolute
     top: calc(100% + 8px)
     left: 0
     right: 0
-    background: white
-    border: 1px solid $gray-200
+    background: var(--card-bg)
+    border: 1px solid var(--border-color)
     border-radius: $radius
-    box-shadow: $shadow-lg
+    box-shadow: var(--shadow-lg)
     z-index: $z-index-dropdown
     overflow: hidden
 
@@ -227,19 +205,9 @@ defineExpose({ focus })
       justify-content: space-between
       align-items: center
       padding: 12px 16px
-      border-bottom: 1px solid $gray-100
+      border-bottom: 1px solid var(--border-light)
       font-size: 13px
-      color: $gray-500
-
-    &-clear
-      background: none
-      border: none
-      color: $primary-color
-      font-size: 13px
-      cursor: pointer
-
-      &:hover
-        text-decoration: underline
+      color: var(--text-secondary)
 
     &-list
       list-style: none
@@ -257,33 +225,20 @@ defineExpose({ focus })
       transition: background $transition-fast
 
       &:hover
-        background: $gray-50
+        background: var(--bg-hover)
 
     &-icon
       font-size: 14px
-      color: $gray-400
+      color: var(--text-muted)
 
     &-text
       flex: 1
       font-size: 14px
-      color: $text-light
+      color: var(--text-primary)
 
     &-remove
-      display: flex
-      align-items: center
-      justify-content: center
-      width: 20px
-      height: 20px
-      background: transparent
-      border: none
-      color: $gray-400
-      font-size: 10px
-      cursor: pointer
       opacity: 0
-      transition: all $transition-fast
-
-      &:hover
-        color: $error-color
+      transition: opacity $transition-fast
 
     &-item:hover &-remove
       opacity: 1
@@ -297,8 +252,4 @@ defineExpose({ focus })
 .dropdown-leave-to
   opacity: 0
   transform: translateY(-8px)
-
-@keyframes spin
-  to
-    transform: rotate(360deg)
 </style>

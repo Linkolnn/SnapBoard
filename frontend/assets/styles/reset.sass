@@ -1,4 +1,7 @@
-// Базовый reset - расширим позже
+// Импорт переменных (включая CSS переменные для тем)
+@import './variables'
+
+// Базовый reset
 *,
 *::before,
 *::after 
@@ -19,6 +22,9 @@ html
 body 
   margin: 0
   padding: 0
+  background-color: var(--bg-primary)
+  color: var(--text-primary)
+  transition: background-color 0.3s ease, color 0.3s ease
 
 
 img 

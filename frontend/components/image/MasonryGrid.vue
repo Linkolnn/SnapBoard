@@ -86,11 +86,21 @@ const handleImageClick = (image: Image) => {
 const updateColumnCount = () => {
   if (!gridRef.value) return
   
-  const width = gridRef.value.offsetWidth
+  const containerWidth = gridRef.value.offsetWidth
+  // Используем clientWidth для корректного определения ширины viewport
+  const viewportWidth = typeof document !== 'undefined' 
+    ? document.documentElement.clientWidth 
+    : 1024
   const minWidth = gridConfig.value.minColumnWidth
   const gap = gridConfig.value.gap
   
-  const count = Math.floor((width + gap) / (minWidth + gap))
+  // Для очень узких экранов (< 350px) - 1 колонка
+  if (viewportWidth < 350) {
+    columnCount.value = 1
+    return
+  }
+  
+  const count = Math.floor((containerWidth + gap) / (minWidth + gap))
   // Минимум 2 колонки, максимум из конфига
   columnCount.value = Math.max(MASONRY_CONFIG.minColumns, Math.min(count, MASONRY_CONFIG.maxColumns))
 }

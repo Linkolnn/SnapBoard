@@ -53,13 +53,14 @@
             <div v-if="uploadQueue.length" class="upload-modal__queue">
               <div class="upload-modal__queue-header">
                 <h3>Очередь загрузки ({{ uploadQueue.length }})</h3>
-                <button
+                <CommonBaseButton
                   v-if="!hasActiveUploads"
-                  class="upload-modal__clear-btn"
+                  variant="ghost"
+                  size="sm"
                   @click="clearQueue"
                 >
                   Очистить
-                </button>
+                </CommonBaseButton>
               </div>
 
               <div class="upload-modal__queue-list">
@@ -76,21 +77,25 @@
           </div>
 
           <footer class="upload-modal__footer">
-            <button
-              class="upload-modal__btn upload-modal__btn--secondary"
+            <CommonBaseButton
+              variant="secondary"
+              size="lg"
               :disabled="hasActiveUploads"
+              full-width
               @click="handleClose"
             >
               Отмена
-            </button>
-            <button
-              class="upload-modal__btn upload-modal__btn--primary"
+            </CommonBaseButton>
+            <CommonBaseButton
+              variant="primary"
+              size="lg"
               :disabled="!pendingUploads.length || hasActiveUploads"
+              :loading="hasActiveUploads"
+              full-width
               @click="handleUploadAll"
             >
-              <span v-if="hasActiveUploads" class="upload-modal__spinner"></span>
               {{ hasActiveUploads ? `Загрузка ${totalUploadProgress}%` : `Загрузить (${pendingUploads.length})` }}
-            </button>
+            </CommonBaseButton>
           </footer>
         </div>
       </div>
@@ -283,69 +288,11 @@ watch(() => props.isOpen, (isOpen) => {
       max-height: 300px
       overflow-y: auto
 
-  &__clear-btn
-    padding: 4px 12px
-    background: none
-    border: 1px solid $gray-300
-    border-radius: $radius-sm
-    font-size: 12px
-    color: $gray-500
-    cursor: pointer
-    transition: all $transition-fast
-
-    &:hover
-      border-color: $error-color
-      color: $error-color
-
   &__footer
     display: flex
     gap: 12px
     padding: 20px 24px
     border-top: 1px solid $gray-200
-
-  &__btn
-    flex: 1
-    padding: 12px 24px
-    font-size: 15px
-    font-weight: 600
-    border: none
-    border-radius: $radius
-    cursor: pointer
-    transition: all $transition-fast
-    display: flex
-    align-items: center
-    justify-content: center
-    gap: 8px
-
-    &--primary
-      background: $primary-color
-      color: white
-
-      &:hover:not(:disabled)
-        background: darken($primary-color, 8%)
-
-      &:disabled
-        opacity: 0.5
-        cursor: not-allowed
-
-    &--secondary
-      background: $gray-100
-      color: $text-light
-
-      &:hover:not(:disabled)
-        background: $gray-200
-
-      &:disabled
-        opacity: 0.5
-        cursor: not-allowed
-
-  &__spinner
-    width: 16px
-    height: 16px
-    border: 2px solid rgba(white, 0.3)
-    border-top-color: white
-    border-radius: 50%
-    animation: spin 0.8s linear infinite
 
 .modal-enter-active,
 .modal-leave-active
@@ -357,8 +304,4 @@ watch(() => props.isOpen, (isOpen) => {
 
   .upload-modal__content
     transform: scale(0.9)
-
-@keyframes spin
-  to
-    transform: rotate(360deg)
 </style>

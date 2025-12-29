@@ -2,6 +2,7 @@
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
+  <CommonToastContainer />
 </template>
 
 <script setup>

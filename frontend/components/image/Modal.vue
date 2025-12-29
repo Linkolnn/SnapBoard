@@ -8,25 +8,36 @@
       >
         <div class="image-modal__content">
           <!-- Кнопка закрытия внутри content -->
-          <button class="image-modal__close" @click="handleClose">✕</button>
+          <CommonBaseIconButton 
+            class="image-modal__close" 
+            variant="primary"
+            size="lg"
+            @click="handleClose"
+          >
+            ✕
+          </CommonBaseIconButton>
 
           <div class="image-modal__image-container">
             <!-- Навигация внутри image-container -->
-            <button
+            <CommonBaseIconButton
               v-if="viewContext.hasPrev"
               class="image-modal__nav image-modal__nav--prev"
+              variant="default"
+              size="lg"
               @click="handlePrev"
             >
               ‹
-            </button>
+            </CommonBaseIconButton>
 
-            <button
+            <CommonBaseIconButton
               v-if="viewContext.hasNext"
               class="image-modal__nav image-modal__nav--next"
+              variant="default"
+              size="lg"
               @click="handleNext"
             >
               ›
-            </button>
+            </CommonBaseIconButton>
 
             <img
               :src="image.url"
@@ -229,36 +240,11 @@ onUnmounted(() => {
     position: absolute
     top: 16px
     right: 16px
-    width: 48px
-    height: 48px
-    background: $primary-color
-    border: none
-    border-radius: 50%
-    color: white
-    font-size: 20px
-    cursor: pointer
-    transition: all $transition-fast
     z-index: 10
-    display: flex
-    align-items: center
-    justify-content: center
 
     @include mobile
-      width: 36px
-      height: 36px
-      font-size: 22px
-
-    &:hover
-      background: darken($primary-color, 10%)
-      transform: translateY(-2px)
-      box-shadow: $shadow-md
-
-    &:active
-      transform: translateY(0)
-
-    &:focus
-      outline: none
-      box-shadow: 0 0 0 3px rgba($primary-color, 0.3)
+      top: 12px
+      right: 12px
 
   &__image-container
     flex: 1
@@ -281,33 +267,11 @@ onUnmounted(() => {
     position: absolute
     top: 50%
     transform: translateY(-50%)
-    width: 48px
-    height: 48px
-    background: rgba(white, 0.9)
-    border: none
-    border-radius: 50%
-    color: $text-light
-    font-size: 28px
-    cursor: pointer
-    transition: all $transition-fast
     z-index: 5
-    display: flex
-    align-items: center
-    justify-content: center
-    box-shadow: $shadow-sm
+    font-size: 28px
 
     @include mobile
-      width: 36px
-      height: 36px
       font-size: 22px
-
-    &:hover
-      background: white
-      transform: translateY(-50%) scale(1.1)
-      box-shadow: $shadow-md
-
-    &:active
-      transform: translateY(-50%) scale(1)
 
     &--prev
       left: 16px

@@ -1,13 +1,14 @@
 <template>
   <div class="sort-select" :class="{ 'sort-select--open': isOpen }">
-    <button 
+    <CommonBaseButton 
+      variant="ghost"
       class="sort-select__trigger"
       @click="toggleDropdown"
     >
       <span class="sort-select__icon">{{ currentOption?.icon }}</span>
       <span class="sort-select__label">{{ currentOption?.label }}</span>
       <span class="sort-select__arrow">▼</span>
-    </button>
+    </CommonBaseButton>
     
     <Transition name="dropdown">
       <div v-if="isOpen" class="sort-select__dropdown">
@@ -96,22 +97,17 @@ onUnmounted(() => {
     align-items: center
     gap: 8px
     padding: 10px 16px
-    background: white
-    border: 2px solid $gray-200
-    border-radius: $radius
-    font-size: 14px
-    color: $text-light
-    cursor: pointer
-    transition: all $transition-fast
+    border: 2px solid var(--border-color) !important
+    border-radius: $radius !important
 
     @include mobile
       width: 100%
 
     &:hover
-      border-color: $gray-300
+      border-color: var(--border-color) !important
 
   &--open &__trigger
-    border-color: $primary-color
+    border-color: var(--accent-color) !important
 
   &__icon
     font-size: 16px
@@ -121,7 +117,7 @@ onUnmounted(() => {
 
   &__arrow
     font-size: 10px
-    color: $gray-400
+    color: var(--text-muted)
     transition: transform $transition-fast
 
   &--open &__arrow
@@ -132,10 +128,10 @@ onUnmounted(() => {
     top: calc(100% + 8px)
     right: 0
     min-width: 200px
-    background: white
-    border: 1px solid $gray-200
+    background: var(--card-bg)
+    border: 1px solid var(--border-color)
     border-radius: $radius
-    box-shadow: $shadow-lg
+    box-shadow: var(--shadow-lg)
     z-index: $z-index-dropdown
     overflow: hidden
 
@@ -151,17 +147,17 @@ onUnmounted(() => {
     background: transparent
     border: none
     font-size: 14px
-    color: $text-light
+    color: var(--text-primary)
     cursor: pointer
     transition: background $transition-fast
     text-align: left
 
     &:hover
-      background: $gray-50
+      background: var(--bg-hover)
 
     &--active
-      background: rgba($primary-color, 0.05)
-      color: $primary-color
+      background: var(--accent-light)
+      color: var(--accent-color)
 
     &-icon
       font-size: 16px
@@ -170,7 +166,7 @@ onUnmounted(() => {
       flex: 1
 
     &-check
-      color: $primary-color
+      color: var(--accent-color)
       font-weight: 600
 
 // Анимации

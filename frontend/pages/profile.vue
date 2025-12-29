@@ -1,61 +1,86 @@
 <template>
   <main class="profile-page">
     <div class="profile-page__container">
-      <header class="profile-page__header">
-        <div class="profile-page__avatar">
-          {{ userInitials }}
-        </div>
-        <div class="profile-page__info">
-          <h1 class="profile-page__name">{{ user?.name || 'Пользователь' }}</h1>
-          <p class="profile-page__email">{{ user?.email }}</p>
-        </div>
-      </header>
-
-      <section class="profile-page__section">
-        <h2>Настройки профиля</h2>
-        
-        <form class="profile-page__form" @submit.prevent="handleSubmit">
-          <div class="profile-page__field">
-            <label for="name">Имя</label>
-            <input 
-              id="name" 
-              v-model="form.name" 
-              type="text" 
-              placeholder="Ваше имя"
-            />
-          </div>
-          
-          <div class="profile-page__field">
-            <label for="email">Email</label>
-            <input 
-              id="email" 
-              v-model="form.email" 
-              type="email" 
-              placeholder="email@example.com"
-              disabled
-            />
-          </div>
-          
-          <button type="submit" class="profile-page__btn" :disabled="isSaving">
-            {{ isSaving ? 'Сохранение...' : 'Сохранить изменения' }}
-          </button>
-        </form>
+      <!-- Header with Avatar -->
+      <ProfileHeader
+        v-if="user && !isEditing"
+        :user="user"
+        :stats="stats"
+        :is-editing="isEditing"
+        @edit="startEditing"
+        @avatar-change="handleAvatarChange"
+      />
+      
+      <!-- Edit Form -->
+      <section v-if="isEditing && user" class="profile-page__section">
+        <ProfileEditForm
+          :user="user"
+          :is-submitting="isSubmitting"
+          @submit="handleProfileUpdate"
+          @cancel="cancelEditing"
+        />
       </section>
-
-      <section class="profile-page__section profile-page__section--danger">
-        <h2>Опасная зона</h2>
-        <p>Удаление аккаунта приведёт к потере всех данных</p>
-        <button class="profile-page__btn profile-page__btn--danger">
-          Удалить аккаунт
-        </button>
+      
+      <!-- Stats -->
+      <ProfileStats v-if="!isEditing" :stats="stats" />
+      
+      <!-- Content Tabs -->
+      <ProfileContentTabs
+        v-if="!isEditing"
+        v-model:active-tab="activeTab"
+        :boards="userBoards"
+        :images="userImages"
+        :is-loading="isLoadingContent"
+        @create-board="showCreateBoard = true"
+        @upload="showUpload = true"
+        @image-click="handleImageClick"
+      />
+      
+      <!-- Danger Zone -->
+      <section v-if="!isEditing" class="profile-page__section profile-page__section--danger">
+        <h2>⚠️ Опасная зона</h2>
+        <p>Эти действия необратимы. Будьте осторожны.</p>
+        
+        <div class="profile-page__danger-actions">
+          <CommonBaseButton
+            variant="secondary"
+            @click="showPasswordModal = true"
+          >
+            🔒 Сменить пароль
+          </CommonBaseButton>
+          
+          <CommonBaseButton
+            variant="danger"
+            @click="showDeleteModal = true"
+          >
+            🗑️ Удалить аккаунт
+          </CommonBaseButton>
+        </div>
       </section>
     </div>
+    
+    <!-- Modals -->
+    <ProfilePasswordModal
+      v-model="showPasswordModal"
+      :is-submitting="isSubmitting"
+      :error="error"
+      @submit="handlePasswordChange"
+    />
+    
+    <ProfileDeleteAccountModal
+      v-model="showDeleteModal"
+      :is-submitting="isSubmitting"
+      :error="error"
+      @confirm="handleDeleteAccount"
+    />
   </main>
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from '~/store/auth'
-import { storeToRefs } from 'pinia'
+import { ref, onMounted } from 'vue'
+import { useProfile } from '~/composables/useProfile'
+import type { UpdateProfileDto, ChangePasswordDto } from '~/types/user'
+import type { Image } from '~/types/image'
 
 definePageMeta({
   middleware: ['auth']
@@ -65,25 +90,70 @@ useHead({
   title: 'Профиль - SnapBoard'
 })
 
-const authStore = useAuthStore()
-const { user } = storeToRefs(authStore)
+const {
+  user,
+  stats,
+  isEditing,
+  isSubmitting,
+  isLoadingContent,
+  userBoards,
+  userImages,
+  error,
+  startEditing,
+  cancelEditing,
+  updateProfile,
+  uploadAvatar,
+  changePassword,
+  deleteAccount,
+  loadUserContent
+} = useProfile()
 
-const userInitials = computed(() => {
-  const name = user.value?.name || 'U'
-  return name.charAt(0).toUpperCase()
+// Local state
+const activeTab = ref<'boards' | 'images'>('boards')
+const showPasswordModal = ref(false)
+const showDeleteModal = ref(false)
+const showCreateBoard = ref(false)
+const showUpload = ref(false)
+
+// Load user content on mount
+onMounted(() => {
+  loadUserContent()
 })
 
-const form = reactive({
-  name: user.value?.name || '',
-  email: user.value?.email || ''
-})
+// Handlers
+const handleProfileUpdate = async (data: UpdateProfileDto) => {
+  const success = await updateProfile(data)
+  if (success) {
+    // TODO: Show success toast
+  }
+}
 
-const isSaving = ref(false)
+const handleAvatarChange = async (file: File) => {
+  const success = await uploadAvatar(file)
+  if (success) {
+    // TODO: Show success toast
+  }
+}
 
-const handleSubmit = async () => {
-  isSaving.value = true
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  isSaving.value = false
+const handlePasswordChange = async (data: ChangePasswordDto) => {
+  const success = await changePassword(data)
+  if (success) {
+    showPasswordModal.value = false
+    // TODO: Show success toast
+  }
+}
+
+const handleDeleteAccount = async (password: string) => {
+  const success = await deleteAccount(password)
+  if (success) {
+    // Redirect happens in composable via logout
+    navigateTo('/')
+  }
+}
+
+const handleImageClick = (image: Image) => {
+  // TODO: Open image modal or navigate to image page
+  console.log('Image clicked:', image.id)
 }
 </script>
 
@@ -93,116 +163,55 @@ const handleSubmit = async () => {
 
 .profile-page
   min-height: 100vh
-  background: $gray-50
+  background: var(--bg-primary)
   padding: 32px 0
 
+  @include mobile
+    padding: 16px 0
+
   &__container
-    max-width: 600px
+    max-width: 900px
     margin: 0 auto
     padding: 0 24px
+    display: flex
+    flex-direction: column
+    gap: 24px
+    
     @include mobile
       padding: 0 16px
-
-  &__header
-    display: flex
-    align-items: center
-    gap: 24px
-    margin-bottom: 48px
-    padding: 32px
-    background: white
-    border-radius: $radius-lg
-
-  &__avatar
-    width: 80px
-    height: 80px
-    background: $primary-color
-    color: white
-    border-radius: 50%
-    display: flex
-    align-items: center
-    justify-content: center
-    font-size: 32px
-    font-weight: 700
-
-  &__name
-    font-size: 24px
-    font-weight: 700
-    color: $text-light
-    margin-bottom: 4px
-
-  &__email
-    color: $gray-500
+      gap: 16px
 
   &__section
-    background: white
+    background: var(--card-bg)
     border-radius: $radius-lg
     padding: 32px
-    margin-bottom: 24px
+    border: 1px solid var(--card-border)
+    
+    @include mobile
+      padding: 24px 16px
 
     h2
       font-size: 20px
       font-weight: 600
-      color: $text-light
-      margin-bottom: 24px
+      color: var(--text-primary)
+      margin-bottom: 16px
 
     &--danger
-      border: 2px solid $error-color
+      border: 2px solid var(--error-color)
+      
+      h2
+        color: var(--error-color)
 
       p
-        color: $gray-500
-        margin-bottom: 16px
+        color: var(--text-secondary)
+        margin-bottom: 20px
+        font-size: 14px
 
-  &__form
+  &__danger-actions
     display: flex
-    flex-direction: column
-    gap: 20px
-
-  &__field
-    display: flex
-    flex-direction: column
-    gap: 8px
-
-    label
-      font-size: 14px
-      font-weight: 500
-      color: $text-light
-
-    input
-      padding: 12px 16px
-      border: 2px solid $gray-200
-      border-radius: $radius
-      font-size: 16px
-      transition: border-color $transition-fast
-
-      &:focus
-        outline: none
-        border-color: $primary-color
-
-      &:disabled
-        background: $gray-100
-        color: $gray-500
-
-  &__btn
-    padding: 12px 24px
-    background: $primary-color
-    color: white
-    border: none
-    border-radius: $radius
-    font-size: 16px
-    font-weight: 600
-    cursor: pointer
-    transition: background $transition-fast
-
-    &:hover:not(:disabled)
-      background: darken($primary-color, 8%)
-
-    &:disabled
-      opacity: 0.6
-      cursor: not-allowed
-
-    &--danger
-      background: $error-color
-
-      &:hover
-        background: darken($error-color, 8%)
+    gap: 12px
+    flex-wrap: wrap
+    
+    @include mobile
+      flex-direction: column
 </style>

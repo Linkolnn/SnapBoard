@@ -1,0 +1,54 @@
+// Общие анимации для проекта SnapBoard
+
+// Анимация вращения (для спиннеров)
+@keyframes spin
+  to
+    transform: rotate(360deg)
+
+// Анимация пульсации
+@keyframes pulse
+  0%, 100%
+    opacity: 1
+  50%
+    opacity: 0.5
+
+// Анимация появления снизу
+@keyframes slideUp
+  from
+    opacity: 0
+    transform: translateY(10px)
+  to
+    opacity: 1
+    transform: translateY(0)
+
+// Анимация появления сверху
+@keyframes slideDown
+  from
+    opacity: 0
+    transform: translateY(-10px)
+  to
+    opacity: 1
+    transform: translateY(0)
+
+// Анимация масштабирования
+@keyframes scaleIn
+  from
+    opacity: 0
+    transform: scale(0.95)
+  to
+    opacity: 1
+    transform: scale(1)
+
+// Анимация затухания
+@keyframes fadeIn
+  from
+    opacity: 0
+  to
+    opacity: 1
+
+// Анимация скелетона (shimmer)
+@keyframes shimmer
+  0%
+    background-position: -200% 0
+  100%
+    background-position: 200% 0

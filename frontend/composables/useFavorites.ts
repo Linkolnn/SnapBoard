@@ -1,13 +1,13 @@
 import { ref, computed } from 'vue'
 
-const favorites = ref<Set<string>>(new Set())
+const favorites = ref<string[]>([])
 
 // Загрузка из localStorage при инициализации
 if (typeof window !== 'undefined') {
   const saved = localStorage.getItem('snapboard_favorites')
   if (saved) {
     try {
-      favorites.value = new Set(JSON.parse(saved))
+      favorites.value = JSON.parse(saved)
     } catch (e) {
       console.error('Failed to parse favorites:', e)
     }
@@ -21,7 +21,7 @@ function saveFavorites() {
   if (typeof window !== 'undefined') {
     localStorage.setItem(
       'snapboard_favorites',
-      JSON.stringify([...favorites.value])
+      JSON.stringify(favorites.value)
     )
   }
 }
@@ -34,17 +34,18 @@ export function useFavorites() {
    * Проверить, находится ли изображение в избранном
    */
   const isFavorite = (imageId: string): boolean => {
-    return favorites.value.has(imageId)
+    return favorites.value.includes(imageId)
   }
   
   /**
    * Переключить статус избранного
    */
   const toggleFavorite = (imageId: string) => {
-    if (favorites.value.has(imageId)) {
-      favorites.value.delete(imageId)
+    const index = favorites.value.indexOf(imageId)
+    if (index > -1) {
+      favorites.value.splice(index, 1)
     } else {
-      favorites.value.add(imageId)
+      favorites.value.push(imageId)
     }
     saveFavorites()
   }
@@ -53,16 +54,21 @@ export function useFavorites() {
    * Добавить в избранное
    */
   const addFavorite = (imageId: string) => {
-    favorites.value.add(imageId)
-    saveFavorites()
+    if (!favorites.value.includes(imageId)) {
+      favorites.value.push(imageId)
+      saveFavorites()
+    }
   }
   
   /**
    * Удалить из избранного
    */
   const removeFavorite = (imageId: string) => {
-    favorites.value.delete(imageId)
-    saveFavorites()
+    const index = favorites.value.indexOf(imageId)
+    if (index > -1) {
+      favorites.value.splice(index, 1)
+      saveFavorites()
+    }
   }
   
   /**
@@ -73,7 +79,7 @@ export function useFavorites() {
   /**
    * Количество избранных
    */
-  const favoritesCount = computed(() => favorites.value.size)
+  const favoritesCount = computed(() => favorites.value.length)
   
   return {
     isFavorite,

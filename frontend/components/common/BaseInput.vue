@@ -4,28 +4,34 @@
             {{ label }}
             <span v-if="required" class="base-inp__required">*</span>
         </label>
-        <div class="base-inp__wrapper">
+        <div class="base-inp__wrapper" :class="{ 'base-inp__wrapper--has-action': $slots.action }">
             <input 
                 :id="inpId"
                 :type="type" 
                 :value="modelValue"
                 :placeholder="placeholder"
                 :disabled="disabled"
-                :class="['base-inp__field', {'base-inp__field--error': error}]"
+                :maxlength="maxlength"
+                :class="['base-inp__field', { 'base-inp__field--error': error, 'base-inp__field--has-action': $slots.action }]"
                 @input="handleInp"
                 @blur="handleBlur"
+                @keydown.enter="$emit('enter')"
             />
 
             <div v-if="$slots.icon" class="base-inp__icon">
                 <slot name="icon"></slot>
             </div>
 
-            <p v-if="error" class="base-inp__error">{{ error }}</p>
-
-            <p v-if="hint && !error" class="base-inp__hint">
-                {{ hint }}
-            </p>
+            <div v-if="$slots.action" class="base-inp__action">
+                <slot name="action"></slot>
+            </div>
         </div>
+        
+        <p v-if="error" class="base-inp__error">{{ error }}</p>
+
+        <p v-if="hint && !error" class="base-inp__hint">
+            {{ hint }}
+        </p>
     </article>
 </template>
 <script setup lang="ts">
@@ -41,6 +47,7 @@ interface Props {
     hint?: string
     disabled?: boolean
     required?: boolean
+    maxlength?: number
 };
 
 withDefaults(defineProps<Props>(), {
@@ -51,11 +58,13 @@ withDefaults(defineProps<Props>(), {
     hint: '',
     disabled: false,
     required: false,
+    maxlength: undefined
 });
 
 const emit = defineEmits<{
     'update:modelValue': [value: string]
     blur: []
+    enter: []
 }>()
 
 const handleInp = (event: Event) => {
@@ -80,48 +89,53 @@ const handleBlur = () => {
     margin-bottom: 8px
     font-size: 14px
     font-weight: 600
-    color: $text-light
+    color: var(--text-primary)
   
   // Звёздочка для обязательных полей
   &__required
-    color: $error-color
+    color: var(--error-color)
     margin-left: 4px
 
   // Обёртка для input и иконки
   &__wrapper
     position: relative
     display: flex
-    flex-direction: column
+    align-items: stretch
+
+    &--has-action
+      gap: 8px
 
   // Само поле ввода
   &__field
+    flex: 1
     padding: 10px 16px
-    font-size: 16px
-    border: 2px solid $gray-300
+    font-size: 15px
+    border: 2px solid var(--input-border)
     border-radius: $radius-sm
-    background: white
+    background: var(--input-bg)
+    color: var(--text-primary)
     transition: all $transition-normal
     
     // Placeholder стили
     &::placeholder
-      color: $gray-400
+      color: var(--text-muted)
     
     // Фокус - подсвечиваем зелёным
     &:focus
       outline: none
-      border-color: $primary-color
-      box-shadow: 0 0 0 3px rgba(0, 220, 130, 0.1)
+      border-color: var(--input-focus-border)
+      box-shadow: 0 0 0 3px var(--accent-light)
     
     // Если есть ошибка - красная рамка
     &--error
-      border-color: $error-color
+      border-color: var(--error-color)
       
       &:focus
-        box-shadow: 0 0 0 3px rgba(255, 68, 68, 0.1)
+        box-shadow: 0 0 0 3px var(--error-light)
     
     // Заблокированное поле
     &:disabled
-      background: $gray-100
+      background: var(--bg-tertiary)
       cursor: not-allowed
       opacity: 0.6
 
@@ -129,22 +143,30 @@ const handleBlur = () => {
   &__icon
     position: absolute
     right: 16px
+    top: 50%
+    transform: translateY(-50%)
     display: flex
     align-items: center
-    color: $gray-400
+    color: var(--text-muted)
     pointer-events: none // иконка не перехватывает клики
+
+  // Слот для кнопки действия справа от инпута
+  &__action
+    display: flex
+    align-items: center
+    flex-shrink: 0
 
   // Сообщение об ошибке под полем
   &__error
     display: block
     margin-top: 8px
-    font-size: 14px
-    color: $error-color
+    font-size: 13px
+    color: var(--error-color)
 
   // Подсказка под полем
   &__hint
     display: block
     margin-top: 8px
-    font-size: 14px
-    color: $gray-400
+    font-size: 13px
+    color: var(--text-muted)
 </style>

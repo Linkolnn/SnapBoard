@@ -9,18 +9,21 @@
           <h3 class="confirm-modal__title">{{ title }}</h3>
           <p class="confirm-modal__message">{{ message }}</p>
           <div class="confirm-modal__actions">
-            <button class="confirm-modal__btn confirm-modal__btn--secondary" @click="handleCancel">
+            <CommonBaseButton 
+              variant="secondary" 
+              full-width 
+              @click="handleCancel"
+            >
               {{ cancelText }}
-            </button>
-            <button
-              class="confirm-modal__btn"
-              :class="`confirm-modal__btn--${type}`"
-              :disabled="isLoading"
+            </CommonBaseButton>
+            <CommonBaseButton
+              :variant="type === 'danger' ? 'danger' : 'primary'"
+              full-width
+              :loading="isLoading"
               @click="handleConfirm"
             >
-              <span v-if="isLoading" class="confirm-modal__spinner"></span>
               {{ confirmText }}
-            </button>
+            </CommonBaseButton>
           </div>
         </article>
       </div>
@@ -67,7 +70,7 @@ const handleCancel = () => !props.isLoading && emit('cancel')
 .confirm-modal
   position: fixed
   inset: 0
-  background: rgba(0, 0, 0, 0.5)
+  background: var(--modal-overlay)
   display: flex
   align-items: center
   justify-content: center
@@ -75,13 +78,13 @@ const handleCancel = () => !props.isLoading && emit('cancel')
   padding: 16px
   
   &__content
-    background: white
+    background: var(--modal-bg)
     border-radius: $radius-lg
     padding: 32px
     max-width: 400px
     width: 100%
     text-align: center
-    box-shadow: $shadow-xl
+    box-shadow: var(--shadow-xl)
   
   &__icon
     width: 64px
@@ -94,73 +97,27 @@ const handleCancel = () => !props.isLoading && emit('cancel')
     margin: 0 auto 20px
     
     &--danger
-      background: rgba($error, 0.1)
+      background: var(--error-light)
     &--warning
-      background: rgba($warning, 0.1)
+      background: var(--warning-light)
     &--info
-      background: rgba($info, 0.1)
+      background: var(--info-light)
   
   &__title
     font-size: 20px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
     margin-bottom: 12px
   
   &__message
     font-size: 15px
-    color: $gray-500
+    color: var(--text-secondary)
     margin-bottom: 28px
     line-height: 1.5
   
   &__actions
     display: flex
     gap: 12px
-  
-  &__btn
-    flex: 1
-    padding: 12px 20px
-    font-size: 15px
-    font-weight: 600
-    border: none
-    border-radius: $radius
-    cursor: pointer
-    transition: all $transition-fast
-    display: flex
-    align-items: center
-    justify-content: center
-    gap: 8px
-    
-    &--secondary
-      background: $gray-100
-      color: $text-light
-      &:hover
-        background: $gray-200
-    
-    &--danger
-      background: $error
-      color: white
-      &:hover:not(:disabled)
-        background: darken($error, 8%)
-    
-    &--warning
-      background: $warning
-      color: white
-    
-    &--info
-      background: $info
-      color: white
-    
-    &:disabled
-      opacity: 0.6
-      cursor: not-allowed
-  
-  &__spinner
-    width: 16px
-    height: 16px
-    border: 2px solid rgba(white, 0.3)
-    border-top-color: white
-    border-radius: 50%
-    animation: spin 0.8s linear infinite
 
 .modal-enter-active, .modal-leave-active
   transition: all 0.3s ease
@@ -169,8 +126,4 @@ const handleCancel = () => !props.isLoading && emit('cancel')
   opacity: 0
   .confirm-modal__content
     transform: scale(0.9)
-
-@keyframes spin
-  to
-    transform: rotate(360deg)
 </style>

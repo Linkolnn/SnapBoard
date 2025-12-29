@@ -16,6 +16,29 @@
                         </button>
                     </header>
 
+                    <!-- Секция пользователя для авторизованных -->
+                    <div v-if="isAuthenticated" class="mobile-menu__user">
+                        <div class="mobile-menu__avatar">
+                            {{ userInitials }}
+                        </div>
+                        <div class="mobile-menu__user-info">
+                            <span class="mobile-menu__user-name">{{ userName }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Быстрые ссылки для авторизованных -->
+                    <div v-if="isAuthenticated" class="mobile-menu__user-links">
+                        <NuxtLink to="/profile" class="mobile-menu__user-link" @click="close">
+                            👤 Профиль
+                        </NuxtLink>
+                        <NuxtLink to="/boards" class="mobile-menu__user-link" @click="close">
+                            📋 Мои доски
+                        </NuxtLink>
+                        <NuxtLink to="/favorites" class="mobile-menu__user-link" @click="close">
+                            ⭐ Избранное
+                        </NuxtLink>
+                    </div>
+
                     <nav class="mobile-menu__nav">
                         <ul class="mobile-menu__list">
                             <li 
@@ -32,6 +55,34 @@
                             </li>
                         </ul>
                     </nav>
+
+                    <!-- Переключатель темы -->
+                    <div class="mobile-menu__theme">
+                        <span class="mobile-menu__theme-label">Тема</span>
+                        <div class="mobile-menu__theme-options">
+                            <button 
+                                class="mobile-menu__theme-btn"
+                                :class="{ 'mobile-menu__theme-btn--active': theme === 'light' }"
+                                @click="setTheme('light')"
+                            >
+                                ☀️ Светлая
+                            </button>
+                            <button 
+                                class="mobile-menu__theme-btn"
+                                :class="{ 'mobile-menu__theme-btn--active': theme === 'dark' }"
+                                @click="setTheme('dark')"
+                            >
+                                🌙 Тёмная
+                            </button>
+                            <button 
+                                class="mobile-menu__theme-btn"
+                                :class="{ 'mobile-menu__theme-btn--active': theme === 'system' }"
+                                @click="setTheme('system')"
+                            >
+                                💻 Авто
+                            </button>
+                        </div>
+                    </div>
 
                     <!-- Кнопки для неавторизованных -->
                     <div v-if="!isAuthenticated" class="mobile-menu__btns">
@@ -61,6 +112,7 @@
 
 <script setup lang="ts">
 import { watch } from 'vue'
+import type { ThemeMode } from '~/store/theme'
 
 interface NavItem {
     link: string
@@ -71,16 +123,22 @@ interface Props {
     modelValue: boolean
     navItems: NavItem[]
     isAuthenticated?: boolean
+    userName?: string
+    userInitials?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    isAuthenticated: false
+    isAuthenticated: false,
+    userName: 'Пользователь',
+    userInitials: 'U'
 })
 
 const emit = defineEmits<{
     'update:modelValue': [value: boolean]
     'logout': []
 }>()
+
+const { theme, setTheme } = useTheme()
 
 const close = () => {
     emit('update:modelValue', false)
@@ -112,7 +170,7 @@ watch(
   left: 0
   right: 0
   bottom: 0
-  background: rgba(0, 0, 0, 0.5)
+  background: var(--bg-overlay)
   z-index: $z-index-modal
   
 // Само выдвижное меню
@@ -123,8 +181,8 @@ watch(
   bottom: 0
   width: 320px
   max-width: 85vw
-  background: white
-  box-shadow: $shadow-lg
+  background: var(--bg-primary)
+  box-shadow: var(--shadow-lg)
   display: flex
   flex-direction: column
   overflow-y: auto
@@ -135,12 +193,12 @@ watch(
     align-items: center
     justify-content: space-between
     padding: 24px
-    border-bottom: 1px solid $gray-200
+    border-bottom: 1px solid var(--border-color)
   
   &__title
     font-size: 20px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
   
   // Кнопка закрытия
   &__close
@@ -150,12 +208,12 @@ watch(
     align-items: center
     justify-content: center
     border-radius: 50%
-    color: $gray-400
+    color: var(--text-muted)
     transition: all $transition-fast
     
     &:hover
-      background: $gray-100
-      color: $text-light
+      background: var(--bg-secondary)
+      color: var(--text-primary)
   
   // Список навигационных ссылок
   &__list
@@ -165,26 +223,64 @@ watch(
   
   &__item
     padding: 16px 24px
-    color: $text-light
+    color: var(--text-primary)
     text-decoration: none
     font-weight: 500
     transition: all $transition-fast
     
     // При наведении - зелёный фон
     &:hover
-      background: rgba(0, 220, 130, 0.1)
-      color: $primary-color
+      background: var(--accent-light)
+      color: var(--accent-color)
     
     // Активная ссылка (текущая страница)
     &.router-link-active
-      background: rgba(0, 220, 130, 0.1)
-      color: $primary-color
-      border-left: 3px solid $primary-color
+      background: var(--accent-light)
+      color: var(--accent-color)
+      border-left: 3px solid var(--accent-color)
+  
+  // Переключатель темы
+  &__theme
+    padding: 16px 24px
+    border-bottom: 1px solid var(--border-color)
+  
+  &__theme-label
+    display: block
+    font-size: 13px
+    font-weight: 500
+    color: var(--text-muted)
+    margin-bottom: 12px
+  
+  &__theme-options
+    display: flex
+    gap: 8px
+  
+  &__theme-btn
+    flex: 1
+    padding: 10px 12px
+    border-radius: $radius-sm
+    background: var(--bg-secondary)
+    color: var(--text-secondary)
+    font-size: 13px
+    font-weight: 500
+    cursor: pointer
+    transition: all $transition-fast
+    
+    &:hover
+      background: var(--bg-tertiary)
+      color: var(--text-primary)
+    
+    &--active
+      background: var(--accent-color)
+      color: white
+      
+      &:hover
+        background: var(--accent-hover)
   
   // Кнопки внизу меню
   &__btns
     padding: 24px
-    border-top: 1px solid $gray-200
+    border-top: 1px solid var(--border-color)
     display: flex
     flex-direction: column
     gap: 16px
@@ -196,11 +292,67 @@ watch(
     width: 100%
     
     &--danger
-      color: $error-color
-      border-color: $error-color
+      color: var(--error-color)
+      border-color: var(--error-color)
       
       &:hover
-        background: rgba($error-color, 0.1)
+        background: var(--error-light)
+
+  // Секция пользователя
+  &__user
+    display: flex
+    align-items: center
+    gap: 12px
+    padding: 20px 24px
+    background: var(--bg-secondary)
+    border-bottom: 1px solid var(--border-color)
+  
+  &__avatar
+    width: 48px
+    height: 48px
+    background: var(--accent-color)
+    color: white
+    border-radius: 50%
+    display: flex
+    align-items: center
+    justify-content: center
+    font-weight: 600
+    font-size: 18px
+    flex-shrink: 0
+  
+  &__user-info
+    flex: 1
+    min-width: 0
+  
+  &__user-name
+    font-size: 16px
+    font-weight: 600
+    color: var(--text-primary)
+    display: block
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
+  
+  // Быстрые ссылки пользователя
+  &__user-links
+    display: flex
+    flex-direction: column
+    border-bottom: 1px solid var(--border-color)
+  
+  &__user-link
+    display: flex
+    align-items: center
+    gap: 10px
+    padding: 14px 24px
+    color: var(--text-primary)
+    text-decoration: none
+    font-size: 15px
+    font-weight: 500
+    transition: all $transition-fast
+    
+    &:hover
+      background: var(--accent-light)
+      color: var(--accent-color)
 
 // Анимации выезда меню справа
 .mobile-menu-enter-active,

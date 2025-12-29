@@ -1,3 +1,7 @@
+// ===========================================
+// SASS переменные
+// ===========================================
+
 // Colors - основные цвета
 $primary-color: #00dc82
 $secondary-color: #111111
@@ -53,3 +57,128 @@ $breakpoint-mobile: 576px
 $z-index-dropdown: 10
 $z-index-modal: 20
 $z-index-tooltip: 30
+
+// ===========================================
+// CSS переменные для тем (динамические)
+// ===========================================
+
+// Светлая тема (по умолчанию)
+\:root, [data-theme="light"]
+  // Фоны
+  --bg-primary: #{$background-light}
+  --bg-secondary: #{$gray-100}
+  --bg-tertiary: #{$gray-200}
+  --bg-hover: #{$gray-50}
+  --bg-overlay: rgba(0, 0, 0, 0.5)
+  
+  // Текст
+  --text-primary: #{$text-light}
+  --text-secondary: #{$gray-500}
+  --text-muted: #{$gray-400}
+  --text-inverse: #{$background-light}
+  
+  // Границы и разделители
+  --border-color: #{$gray-300}
+  --border-light: #{$gray-200}
+  --divider-color: #e5e5e5
+  
+  // Тени
+  --shadow-sm: #{$shadow-sm}
+  --shadow-md: #{$shadow-md}
+  --shadow-lg: #{$shadow-lg}
+  --shadow-xl: #{$shadow-xl}
+  
+  // Акцентные цвета
+  --accent-color: #{$primary-color}
+  --accent-hover: #00b86b
+  --accent-light: rgba(0, 220, 130, 0.1)
+  
+  // Состояния
+  --error-color: #{$error-color}
+  --error-light: rgba(255, 68, 68, 0.1)
+  --success-color: #{$success-color}
+  --success-light: rgba(0, 220, 130, 0.1)
+  --warning-color: #{$warning-color}
+  --warning-light: rgba(255, 170, 0, 0.1)
+  --info-color: #{$info-color}
+  --info-light: rgba(0, 153, 255, 0.1)
+  
+  // Компоненты
+  --card-bg: #{$background-light}
+  --card-border: #{$gray-200}
+  --input-bg: #{$background-light}
+  --input-border: #{$gray-300}
+  --input-focus-border: #{$primary-color}
+  --button-ghost-hover: rgba(0, 0, 0, 0.05)
+  
+  // Header
+  --header-bg: #{$background-light}
+  --header-border: #{$gray-200}
+  
+  // Modal
+  --modal-bg: #{$background-light}
+  --modal-overlay: rgba(0, 0, 0, 0.5)
+
+// Тёмная тема
+[data-theme="dark"]
+  // Фоны
+  --bg-primary: #{$background-dark}
+  --bg-secondary: #242424
+  --bg-tertiary: #2e2e2e
+  --bg-hover: #333333
+  --bg-overlay: rgba(0, 0, 0, 0.7)
+  
+  // Текст
+  --text-primary: #{$text-dark}
+  --text-secondary: #b3b3b3
+  --text-muted: #808080
+  --text-inverse: #{$background-dark}
+  
+  // Границы и разделители
+  --border-color: #3d3d3d
+  --border-light: #333333
+  --divider-color: #3d3d3d
+  
+  // Тени (более выраженные для тёмной темы)
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3)
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4)
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5)
+  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.6)
+  
+  // Акцентные цвета (чуть ярче для контраста)
+  --accent-color: #{$primary-color}
+  --accent-hover: #00ff9d
+  --accent-light: rgba(0, 220, 130, 0.15)
+  
+  // Состояния
+  --error-color: #ff6b6b
+  --error-light: rgba(255, 107, 107, 0.15)
+  --success-color: #{$success-color}
+  --success-light: rgba(0, 220, 130, 0.15)
+  --warning-color: #ffc107
+  --warning-light: rgba(255, 193, 7, 0.15)
+  --info-color: #4dabf7
+  --info-light: rgba(77, 171, 247, 0.15)
+  
+  // Компоненты
+  --card-bg: #242424
+  --card-border: #3d3d3d
+  --input-bg: #2e2e2e
+  --input-border: #3d3d3d
+  --input-focus-border: #{$primary-color}
+  --button-ghost-hover: rgba(255, 255, 255, 0.1)
+  
+  // Header
+  --header-bg: #{$background-dark}
+  --header-border: #3d3d3d
+  
+  // Modal
+  --modal-bg: #242424
+  --modal-overlay: rgba(0, 0, 0, 0.8)
+
+// Плавные переходы при смене темы
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important

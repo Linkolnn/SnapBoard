@@ -78,6 +78,8 @@ export const useBoardsStore = defineStore('boards', () => {
       if (index === -1) throw new Error('Доска не найдена')
       
       const existing = boards.value[index]
+      if (!existing) throw new Error('Доска не найдена')
+      
       const updated: Board = {
         id: existing.id,
         userId: existing.userId,

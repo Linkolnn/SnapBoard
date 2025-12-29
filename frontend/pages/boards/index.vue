@@ -176,7 +176,7 @@ onMounted(() => loadBoards())
 
 .boards-page
   min-height: 100vh
-  background: $gray-50
+  background: var(--bg-primary)
   padding: 32px 0
   
   &__container
@@ -204,21 +204,21 @@ onMounted(() => loadBoards())
   &__title
     font-size: 32px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
     @include mobile
       font-size: 28px
   
   &__count
     font-size: 16px
-    color: $gray-400
+    color: var(--text-muted)
   
   &__create-btn
     display: flex
     align-items: center
     gap: 8px
     padding: 12px 24px
-    background: $primary-color
-    color: white
+    background: var(--accent-color)
+    color: var(--text-inverse)
     border: none
     border-radius: $radius
     font-size: 16px
@@ -226,7 +226,7 @@ onMounted(() => loadBoards())
     cursor: pointer
     transition: all $transition-fast
     &:hover
-      background: darken($primary-color, 8%)
+      background: var(--accent-hover)
       transform: translateY(-2px)
   
   &__create-icon
@@ -242,22 +242,22 @@ onMounted(() => loadBoards())
   
   &__filter
     padding: 8px 16px
-    background: white
-    border: 2px solid $gray-200
+    background: var(--card-bg)
+    border: 2px solid var(--border-color)
     border-radius: $radius-full
     font-size: 14px
     font-weight: 500
-    color: $gray-500
+    color: var(--text-secondary)
     cursor: pointer
     transition: all $transition-fast
     white-space: nowrap
     &:hover
-      border-color: $primary-color
-      color: $primary-color
+      border-color: var(--accent-color)
+      color: var(--accent-color)
     &--active
-      background: $primary-color
-      border-color: $primary-color
-      color: white
+      background: var(--accent-color)
+      border-color: var(--accent-color)
+      color: var(--text-inverse)
   
   &__loading, &__error, &__empty
     text-align: center
@@ -266,20 +266,20 @@ onMounted(() => loadBoards())
   &__spinner
     width: 48px
     height: 48px
-    border: 3px solid $gray-200
-    border-top-color: $primary-color
+    border: 3px solid var(--border-color)
+    border-top-color: var(--accent-color)
     border-radius: 50%
     margin: 0 auto 16px
     animation: spin 1s linear infinite
   
   &__error
     p
-      color: $error
+      color: var(--error-color)
       margin-bottom: 16px
     button
       padding: 12px 24px
-      background: $primary-color
-      color: white
+      background: var(--accent-color)
+      color: var(--text-inverse)
       border: none
       border-radius: $radius
       cursor: pointer
@@ -290,10 +290,10 @@ onMounted(() => loadBoards())
       margin-bottom: 16px
     h2
       font-size: 24px
-      color: $text-light
+      color: var(--text-primary)
       margin-bottom: 8px
     p
-      color: $gray-400
+      color: var(--text-muted)
       margin-bottom: 24px
   
   &__grid
@@ -306,7 +306,7 @@ onMounted(() => loadBoards())
   &__modal
     position: fixed
     inset: 0
-    background: rgba(0, 0, 0, 0.5)
+    background: var(--modal-overlay)
     display: flex
     align-items: center
     justify-content: center
@@ -315,7 +315,7 @@ onMounted(() => loadBoards())
     
     &-content
       position: relative
-      background: white
+      background: var(--modal-bg)
       border-radius: $radius-lg
       padding: 32px
       max-width: 500px
@@ -330,13 +330,14 @@ onMounted(() => loadBoards())
       width: 32px
       height: 32px
       border: none
-      background: $gray-100
+      background: var(--bg-tertiary)
       border-radius: 50%
       font-size: 18px
       cursor: pointer
+      color: var(--text-primary)
       transition: all $transition-fast
       &:hover
-        background: $gray-200
+        background: var(--bg-hover)
 
 .modal-enter-active, .modal-leave-active
   transition: all 0.3s ease

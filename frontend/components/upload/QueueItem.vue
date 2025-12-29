@@ -42,23 +42,25 @@
     </div>
 
     <div class="queue-item__actions">
-      <button
+      <CommonBaseIconButton
         v-if="item.status === 'pending'"
-        class="queue-item__action"
+        variant="ghost"
+        size="sm"
         title="Удалить"
         @click="handleRemove"
       >
         🗑️
-      </button>
+      </CommonBaseIconButton>
       
-      <button
+      <CommonBaseIconButton
         v-if="item.status === 'error'"
-        class="queue-item__action"
+        variant="ghost"
+        size="sm"
         title="Повторить"
         @click="handleRetry"
       >
         🔄
-      </button>
+      </CommonBaseIconButton>
     </div>
   </article>
 </template>
@@ -208,20 +210,4 @@ const handleRetry = () => {
     display: flex
     flex-direction: column
     gap: 4px
-
-  &__action
-    width: 32px
-    height: 32px
-    border: none
-    background: $gray-100
-    border-radius: 50%
-    cursor: pointer
-    font-size: 14px
-    display: flex
-    align-items: center
-    justify-content: center
-    transition: all $transition-fast
-
-    &:hover
-      background: $gray-200
 </style>

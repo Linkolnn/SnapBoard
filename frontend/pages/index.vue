@@ -157,6 +157,8 @@ const selectImage = (image: Image) => {
 
 .home-page
   width: 100%
+  background: var(--bg-primary)
+  min-height: 100vh
   
   &__container
     max-width: $breakpoint-desktop
@@ -173,7 +175,7 @@ const selectImage = (image: Image) => {
     h1
       font-size: 42px
       font-weight: 700
-      color: $text-light
+      color: var(--text-primary)
       margin-bottom: 16px
       
       @include mobile
@@ -181,7 +183,7 @@ const selectImage = (image: Image) => {
     
     p
       font-size: 18px
-      color: $gray-500
+      color: var(--text-secondary)
   
   &__gallery
     padding: 32px 0 64px
@@ -189,7 +191,7 @@ const selectImage = (image: Image) => {
     h2
       font-size: 28px
       font-weight: 700
-      color: $text-light
+      color: var(--text-primary)
       margin-bottom: 32px
       
       @include mobile
@@ -198,7 +200,7 @@ const selectImage = (image: Image) => {
   &__no-results
     text-align: center
     padding: 64px 24px
-    background: white
+    background: var(--card-bg)
     border-radius: $radius-lg
     
     &-icon
@@ -207,11 +209,11 @@ const selectImage = (image: Image) => {
     
     h3
       font-size: 24px
-      color: $text-light
+      color: var(--text-primary)
       margin-bottom: 8px
     
     p
-      color: $gray-400
+      color: var(--text-muted)
       margin-bottom: 24px
   
   &__clear-btn
@@ -219,7 +221,7 @@ const selectImage = (image: Image) => {
     align-items: center
     gap: 8px
     padding: 12px 24px
-    background: $primary-color
+    background: var(--accent-color)
     color: white
     border: none
     border-radius: $radius
@@ -229,5 +231,5 @@ const selectImage = (image: Image) => {
     transition: background $transition-fast
     
     &:hover
-      background: darken($primary-color, 8%)
+      background: var(--accent-hover)
 </style>

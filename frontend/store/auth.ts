@@ -96,6 +96,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const updateProfile = (data: Partial<User>) => {
+    if (user.value) {
+      user.value = { ...user.value, ...data }
+    }
+  }
+
+  const updateAvatar = (avatarUrl: string) => {
+    if (user.value) {
+      user.value = { ...user.value, avatar: avatarUrl }
+    }
+  }
+
   return {
     user,
     isLoading,
@@ -105,6 +117,8 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     fetchCurrentUser,
-    refreshAccessToken
+    refreshAccessToken,
+    updateProfile,
+    updateAvatar
   }
 })

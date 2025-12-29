@@ -95,12 +95,12 @@ const handleClick = () => {
   border-radius: $radius
   overflow: hidden
   cursor: pointer
-  background: $gray-200
+  background: var(--bg-tertiary)
   transition: all $transition-normal
   
   &:hover
     transform: translateY(-4px)
-    box-shadow: $shadow-lg
+    box-shadow: var(--shadow-lg)
     
     .img-card__overlay
       opacity: 1
@@ -108,7 +108,7 @@ const handleClick = () => {
   &__skeleton
     width: 100%
     height: 300px
-    background: $gray-200
+    background: var(--bg-tertiary)
     position: relative
     overflow: hidden
     
@@ -118,7 +118,7 @@ const handleClick = () => {
       left: 0
       right: 0
       bottom: 0
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)
       animation: shimmer 1.5s infinite
   
   &__img

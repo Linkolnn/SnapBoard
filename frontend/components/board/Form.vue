@@ -2,35 +2,28 @@
   <form class="board-form" @submit.prevent="handleSubmit">
     <h2 class="board-form__title">{{ isEditing ? 'Редактировать доску' : 'Создать доску' }}</h2>
     
-    <div class="board-form__field">
-      <label for="title" class="board-form__label">Название *</label>
-      <input
-        id="title"
-        v-model="formData.title"
-        type="text"
-        class="board-form__input"
-        :class="{ 'board-form__input--error': errors.title }"
-        placeholder="Введите название доски"
-        maxlength="100"
-      />
-      <span v-if="errors.title" class="board-form__error">{{ errors.title }}</span>
-    </div>
+    <BaseInput
+      v-model="formData.title"
+      label="Название"
+      placeholder="Введите название доски"
+      :error="errors.title"
+      :disabled="isSubmitting"
+      :maxlength="100"
+      required
+    />
     
-    <div class="board-form__field">
-      <label for="description" class="board-form__label">Описание</label>
-      <textarea
-        id="description"
-        v-model="formData.description"
-        class="board-form__textarea"
-        placeholder="Добавьте описание (необязательно)"
-        rows="3"
-        maxlength="500"
-      ></textarea>
-    </div>
+    <BaseTextarea
+      v-model="formData.description"
+      label="Описание"
+      placeholder="Добавьте описание (необязательно)"
+      :rows="3"
+      :maxlength="500"
+      :disabled="isSubmitting"
+    />
     
     <div class="board-form__field board-form__field--checkbox">
       <label class="board-form__checkbox">
-        <input v-model="formData.isPrivate" type="checkbox" />
+        <input v-model="formData.isPrivate" type="checkbox" :disabled="isSubmitting" />
         <span class="board-form__checkbox-mark"></span>
         <span class="board-form__checkbox-text">Приватная доска</span>
       </label>
@@ -38,19 +31,18 @@
     </div>
     
     <div class="board-form__actions">
-      <button type="button" class="board-form__btn board-form__btn--secondary" @click="handleCancel">
+      <BaseButton variant="secondary" :disabled="isSubmitting" @click="handleCancel">
         Отмена
-      </button>
-      <button type="submit" class="board-form__btn board-form__btn--primary" :disabled="isSubmitting">
-        <span v-if="isSubmitting" class="board-form__spinner"></span>
+      </BaseButton>
+      <BaseButton type="submit" :loading="isSubmitting" :disabled="isSubmitting">
         {{ isEditing ? 'Сохранить' : 'Создать' }}
-      </button>
+      </BaseButton>
     </div>
   </form>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { reactive, computed, watch } from 'vue'
 import type { Board, CreateBoardDto, UpdateBoardDto } from '~/types/board'
 
 interface Props {
@@ -124,47 +116,12 @@ const handleCancel = () => emit('cancel')
   &__title
     font-size: 24px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
     margin-bottom: 24px
   
   &__field
-    display: flex
-    flex-direction: column
-    margin-bottom: 20px
-    
     &--checkbox
       margin-bottom: 24px
-  
-  &__label
-    display: block
-    font-size: 14px
-    font-weight: 600
-    color: $text-light
-    margin-bottom: 8px
-  
-  &__input, &__textarea
-    padding: 12px 16px
-    font-size: 15px
-    border: 2px solid $gray-200
-    border-radius: $radius-sm
-    transition: border-color $transition-fast
-    
-    &:focus
-      outline: none
-      border-color: $primary-color
-    
-    &--error
-      border-color: $error
-  
-  &__textarea
-    resize: vertical
-    min-height: 80px
-  
-  &__error
-    display: block
-    font-size: 13px
-    color: $error
-    margin-top: 6px
   
   &__checkbox
     display: flex
@@ -178,7 +135,7 @@ const handleCancel = () => emit('cancel')
     &-mark
       width: 22px
       height: 22px
-      border: 2px solid $gray-300
+      border: 2px solid var(--border-color)
       border-radius: 6px
       position: relative
       transition: all $transition-fast
@@ -191,23 +148,27 @@ const handleCancel = () => emit('cancel')
         align-items: center
         justify-content: center
         font-size: 14px
-        color: white
+        color: var(--text-inverse)
         opacity: 0
         transition: opacity $transition-fast
     
     input:checked + &-mark
-      background: $primary-color
-      border-color: $primary-color
+      background: var(--accent-color)
+      border-color: var(--accent-color)
       &::after
         opacity: 1
     
+    input:disabled + &-mark
+      opacity: 0.5
+      cursor: not-allowed
+    
     &-text
       font-size: 15px
-      color: $text-light
+      color: var(--text-primary)
   
   &__hint
     font-size: 13px
-    color: $gray-400
+    color: var(--text-muted)
     margin-top: 6px
     margin-left: 34px
   
@@ -215,44 +176,4 @@ const handleCancel = () => emit('cancel')
     display: flex
     gap: 12px
     justify-content: flex-end
-  
-  &__btn
-    padding: 12px 24px
-    font-size: 15px
-    font-weight: 600
-    border: none
-    border-radius: $radius
-    cursor: pointer
-    transition: all $transition-fast
-    display: flex
-    align-items: center
-    gap: 8px
-    
-    &--secondary
-      background: $gray-100
-      color: $text-light
-      &:hover
-        background: $gray-200
-    
-    &--primary
-      background: $primary-color
-      color: white
-      &:hover:not(:disabled)
-        background: darken($primary-color, 8%)
-    
-    &:disabled
-      opacity: 0.6
-      cursor: not-allowed
-  
-  &__spinner
-    width: 16px
-    height: 16px
-    border: 2px solid rgba(white, 0.3)
-    border-top-color: white
-    border-radius: 50%
-    animation: spin 0.8s linear infinite
-
-@keyframes spin
-  to
-    transform: rotate(360deg)
 </style>

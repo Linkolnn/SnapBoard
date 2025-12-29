@@ -5,10 +5,10 @@
 export const MASONRY_CONFIG = {
   // Минимальная ширина колонки
   minColumnWidth: {
-    desktop: 280,    // > 1024px
-    laptop: 250,     // 768px - 1024px
-    tablet: 220,     // 576px - 768px
-    mobile: 140,     // 380px - 576px
+    desktop: 300,    // > 1024px
+    laptop: 280,     // 768px - 1024px
+    tablet: 250,     // 576px - 768px
+    mobile: 220,     // 380px - 576px
     narrow: 120      // < 380px (для 2 колонок на узких экранах)
   },
   
@@ -22,7 +22,7 @@ export const MASONRY_CONFIG = {
   },
   
   // Максимальное количество колонок
-  maxColumns: 6,
+  maxColumns: 5,
   
   // Минимальное количество колонок
   minColumns: 2,

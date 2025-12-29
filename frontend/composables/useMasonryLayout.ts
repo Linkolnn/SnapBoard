@@ -35,7 +35,7 @@ export const useMasonryLayout = (minColumnWidth = 150, gap = 10) => {
     
     // Рассчитываем сколько колонок влезет
     const maxColumns = Math.floor((availableWidth + gap) / (minColumnWidth + gap))
-    const count = Math.max(1, Math.min(maxColumns, 6))
+    const count = Math.max(1, Math.min(maxColumns, 5))
     
     // Рассчитываем ширину колонки чтобы заполнить всё пространство
     const totalGaps = (count - 1) * gap
