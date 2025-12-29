@@ -5,6 +5,11 @@ import type {
   UpdateImageDto,
   UploadQueueItem
 } from '~/types/image'
+import type { 
+  PaginationState, 
+  PageRequest, 
+  PaginatedResponse 
+} from '~/types/pagination'
 import { 
   generateUploadId, 
   createFilePreview,
@@ -19,6 +24,15 @@ export const useImagesStore = defineStore('images', () => {
   const uploadQueue = ref<UploadQueueItem[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+
+  // Pagination State
+  const pagination = ref<PaginationState>({
+    page: 1,
+    pageSize: 12,
+    hasMore: true,
+    isLoading: false,
+    error: null
+  })
 
   // Getters
   const imagesByBoard = computed(() => (boardId: string) =>
@@ -242,6 +256,58 @@ export const useImagesStore = defineStore('images', () => {
     error.value = null
   }
 
+  // Pagination Getters
+  const paginationState = computed(() => pagination.value)
+  
+  const canLoadMore = computed(() => 
+    pagination.value.hasMore && !pagination.value.isLoading
+  )
+
+  // Pagination Actions
+  const fetchPagedImages = async (request: PageRequest): Promise<PaginatedResponse<Image>> => {
+    pagination.value.isLoading = true
+    pagination.value.error = null
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800))
+      const response = getMockPagedImages(request)
+      return response
+    } catch (e) {
+      const errorMessage = 'Не удалось загрузить изображения'
+      pagination.value.error = errorMessage
+      throw new Error(errorMessage)
+    } finally {
+      pagination.value.isLoading = false
+    }
+  }
+
+  const appendImages = (newImages: Image[]) => {
+    images.value = [...images.value, ...newImages]
+  }
+
+  const setImages = (newImages: Image[]) => {
+    images.value = newImages
+  }
+
+  const resetPagination = () => {
+    pagination.value = {
+      page: 1,
+      pageSize: 12,
+      hasMore: true,
+      isLoading: false,
+      error: null
+    }
+    images.value = []
+  }
+
+  const updatePagination = (updates: Partial<PaginationState>) => {
+    pagination.value = { ...pagination.value, ...updates }
+  }
+
+  const setPaginationError = (errorMessage: string | null) => {
+    pagination.value.error = errorMessage
+  }
+
   return {
     images,
     uploadQueue,
@@ -262,7 +328,17 @@ export const useImagesStore = defineStore('images', () => {
     uploadAll,
     deleteImage,
     updateImage,
-    clearError
+    clearError,
+    // Pagination exports
+    pagination,
+    paginationState,
+    canLoadMore,
+    fetchPagedImages,
+    appendImages,
+    setImages,
+    resetPagination,
+    updatePagination,
+    setPaginationError
   }
 })
 
@@ -297,4 +373,49 @@ function getMockImages(boardId: string): Image[] {
       createdAt: new Date().toISOString()
     }
   ]
+}
+
+function getMockPagedImages(request: PageRequest): PaginatedResponse<Image> {
+  const { page, pageSize, boardId } = request
+  const allImages = generateMockImages(boardId || 'default', 50)
+  
+  const startIndex = (page - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const pageImages = allImages.slice(startIndex, endIndex)
+  
+  return {
+    items: pageImages,
+    page,
+    pageSize,
+    totalItems: allImages.length,
+    totalPages: Math.ceil(allImages.length / pageSize),
+    hasMore: endIndex < allImages.length
+  }
+}
+
+function generateMockImages(boardId: string, count: number): Image[] {
+  const tags = ['природа', 'город', 'архитектура', 'портрет', 'еда', 'путешествия', 'искусство', 'технологии']
+  const titles = ['Горный пейзаж', 'Городская архитектура', 'Лесное озеро', 'Закат на море', 'Ночной город', 'Весенний сад', 'Зимний лес', 'Осенний парк']
+  const images: Image[] = []
+  
+  for (let i = 1; i <= count; i++) {
+    const width = 300 + Math.floor(Math.random() * 200)
+    const height = 300 + Math.floor(Math.random() * 300)
+    
+    images.push({
+      id: `img-${boardId}-${i}`,
+      url: `https://picsum.photos/seed/${boardId}-${i}/${width}/${height}`,
+      title: titles[i % titles.length] || `Изображение ${i}`,
+      description: `Описание изображения ${i}`,
+      boardId,
+      userId: 'current-user',
+      tags: [
+        tags[Math.floor(Math.random() * tags.length)] || 'природа',
+        tags[Math.floor(Math.random() * tags.length)] || 'город'
+      ],
+      createdAt: new Date(Date.now() - i * 86400000).toISOString()
+    })
+  }
+  
+  return images
 }

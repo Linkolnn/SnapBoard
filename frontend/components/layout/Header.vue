@@ -1,75 +1,242 @@
 <template>
-    <header class="app-header">
-        <div class="app-header__container">
-            <NuxtLink to="/" class="app-header__logo-link">
-                <span class="app-header__logo-text">SnapBoard</span>
+  <header class="app-header">
+    <div class="app-header__container">
+      <NuxtLink to="/" class="app-header__logo-link">
+        <img src="/favicon.ico" alt="SnapBoard" class="app-header__logo-icon" />
+        <span class="app-header__logo-text">SnapBoard</span>
+      </NuxtLink>
+
+      <nav class="app-header__nav">
+        <ul class="app-header__list">
+          <li 
+            v-for="item in visibleNavItems"
+            :key="item.link"
+            class="app-header__item"
+          >
+            <NuxtLink class="app-header__link" :to="item.link">
+              {{ item.text }}
             </NuxtLink>
+          </li>
+        </ul>
+      </nav>
 
-            <nav class="app-header__nav">
-                <ul class="app-header__list">
-                    <li 
-                        v-for="item in navItems"
-                        :key="item.link"
-                        class="app-header__item"
-                        
-                    >
-                        <NuxtLink class="app-header__link" :to="item.link">
-                            {{ item.text }}
-                        </NuxtLink>
-                    </li>
-                </ul>
-            </nav>
-
-            <article class="app-header__actions">
-                <div class="app-header__search">
-                    <input 
-                        class="app-header__search-inp"
-                        type="search" 
-                        placeholder="Поиск..." 
-                    />
-                </div>
-                <article class="app-header__btns">
-                    <CommonBaseButton variant="outline">
-                        Войти
-                    </CommonBaseButton>
-                    <CommonBaseButton variant="primary">
-                        Регистрация
-                    </CommonBaseButton>
-                </article>
-
-                <button
-                    class="app-header__burger"
-                    @click="toggleMobileMenu"
-                    aria-label="Toggle menu"
+      <article class="app-header__actions">
+        <!-- Обновлённый поиск -->
+        <div v-if="!hideSearch" class="app-header__search">
+          <div class="app-header__search-wrapper">
+            <span class="app-header__search-icon">🔍</span>
+            <input 
+              v-model="searchQuery"
+              class="app-header__search-inp"
+              type="search" 
+              placeholder="Поиск изображений..." 
+              @keydown.enter="handleSearch"
+              @focus="showSearchDropdown = true"
+              @blur="handleSearchBlur"
+            />
+            <button 
+              v-if="searchQuery"
+              class="app-header__search-clear"
+              type="button"
+              @click="clearSearch"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <!-- Dropdown с историей поиска -->
+          <Transition name="dropdown">
+            <div 
+              v-if="showSearchDropdown && searchHistory.length > 0 && !searchQuery" 
+              class="app-header__search-dropdown"
+            >
+              <div class="app-header__search-dropdown-header">
+                <span>Недавние поиски</span>
+                <button @click.stop="clearSearchHistory">Очистить</button>
+              </div>
+              <ul>
+                <li 
+                  v-for="item in searchHistory" 
+                  :key="item.id"
+                  @mousedown="applySearchFromHistory(item.query)"
                 >
-                    <span class="app-header__burger-line"></span>
-                    <span class="app-header__burger-line"></span>
-                    <span class="app-header__burger-line"></span>
-                </button>
-            </article>
+                  <span>🕐</span>
+                  <span>{{ item.query }}</span>
+                </li>
+              </ul>
+            </div>
+          </Transition>
         </div>
+        
+        <!-- Кнопки для неавторизованных -->
+        <article v-if="!isAuthenticated" class="app-header__btns">
+          <NuxtLink to="/login">
+            <CommonBaseButton variant="outline">
+              Войти
+            </CommonBaseButton>
+          </NuxtLink>
+          <NuxtLink to="/register">
+            <CommonBaseButton variant="primary">
+              Регистрация
+            </CommonBaseButton>
+          </NuxtLink>
+        </article>
+        
+        <!-- Меню для авторизованных -->
+        <article v-else class="app-header__user">
+          <div class="app-header__user-menu" @click="toggleUserMenu">
+            <div class="app-header__avatar">
+              {{ userInitials }}
+            </div>
+            <span class="app-header__user-name">{{ userName }}</span>
+            <span class="app-header__dropdown-icon">▼</span>
+          </div>
+          
+          <Transition name="dropdown">
+            <div v-if="isUserMenuOpen" class="app-header__dropdown">
+              <NuxtLink to="/profile" class="app-header__dropdown-item" @click="closeUserMenu">
+                👤 Профиль
+              </NuxtLink>
+              <NuxtLink to="/boards" class="app-header__dropdown-item" @click="closeUserMenu">
+                📋 Мои доски
+              </NuxtLink>
+              <NuxtLink to="/favorites" class="app-header__dropdown-item" @click="closeUserMenu">
+                ⭐ Избранное
+              </NuxtLink>
+              <hr class="app-header__dropdown-divider" />
+              <button class="app-header__dropdown-item app-header__dropdown-item--danger" @click="handleLogout">
+                🚪 Выйти
+              </button>
+            </div>
+          </Transition>
+        </article>
 
-        <LayoutMobileMenu v-model="isMobileMenuOpen" :nav-items="navItems"/>
-    </header>
+        <button
+          class="app-header__burger"
+          @click="toggleMobileMenu"
+          aria-label="Toggle menu"
+        >
+          <span class="app-header__burger-line"></span>
+          <span class="app-header__burger-line"></span>
+          <span class="app-header__burger-line"></span>
+        </button>
+      </article>
+    </div>
+
+    <LayoutMobileMenu 
+      v-model="isMobileMenuOpen" 
+      :nav-items="visibleNavItems" 
+      :is-authenticated="isAuthenticated" 
+      @logout="handleLogout"
+    />
+  </header>
 </template>
+
 <script setup lang="ts">
+import { useAuthStore } from '~/store/auth'
+import { useSearchStore } from '~/store/search'
+import { storeToRefs } from 'pinia'
 
-interface NavItems {
-    link: string
-    text: string
-};
+interface NavItem {
+  link: string
+  text: string
+  requiresAuth?: boolean
+}
 
-const navItems: NavItems[] = [
-    {text: 'Главная', link: '/'},
-    {text: 'Моя доска', link: '/boards'},
-    {text: 'Избранное', link: '/favorites'},
-    {text: 'Профиль', link: '/profile'},
-];
+interface Props {
+  hideSearch?: boolean
+}
 
-const isMobileMenuOpen = ref(false);
+const props = withDefaults(defineProps<Props>(), {
+  hideSearch: false
+})
+
+const authStore = useAuthStore()
+const searchStore = useSearchStore()
+const route = useRoute()
+
+const { isAuthenticated, user } = storeToRefs(authStore)
+const { query: storeQuery, history: searchHistory } = storeToRefs(searchStore)
+
+const navItems: NavItem[] = [
+  { text: 'Главная', link: '/' },
+  { text: 'О нас', link: '/about' },
+  { text: 'Помощь', link: '/help' },
+  { text: 'Мои доски', link: '/boards', requiresAuth: true },
+  { text: 'Избранное', link: '/favorites', requiresAuth: true },
+]
+
+const visibleNavItems = computed(() => {
+  return navItems.filter(item => !item.requiresAuth || isAuthenticated.value)
+})
+
+// Исправлено: используем username вместо name
+const userName = computed(() => user.value?.username || 'Пользователь')
+const userInitials = computed(() => {
+  const name = user.value?.username || 'U'
+  return name.charAt(0).toUpperCase()
+})
+
+const isMobileMenuOpen = ref(false)
+const isUserMenuOpen = ref(false)
+const searchQuery = ref('')
+const showSearchDropdown = ref(false)
+
+// Синхронизация с store
+watch(storeQuery, (newQuery) => {
+  searchQuery.value = newQuery
+})
 
 const toggleMobileMenu = () => {
-    isMobileMenuOpen.value = !isMobileMenuOpen.value
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
+const toggleUserMenu = () => {
+  isUserMenuOpen.value = !isUserMenuOpen.value
+}
+
+const closeUserMenu = () => {
+  isUserMenuOpen.value = false
+}
+
+const handleLogout = async () => {
+  closeUserMenu()
+  await authStore.logout()
+  navigateTo('/')
+}
+
+// Функции поиска
+const handleSearch = () => {
+  if (searchQuery.value.trim()) {
+    searchStore.setQuery(searchQuery.value)
+    searchStore.addToHistory(searchQuery.value)
+    
+    // Если не на главной или странице доски - переходим на главную
+    if (route.path !== '/' && !route.path.startsWith('/boards/')) {
+      navigateTo('/')
+    }
+  }
+  showSearchDropdown.value = false
+}
+
+const clearSearch = () => {
+  searchQuery.value = ''
+  searchStore.setQuery('')
+}
+
+const handleSearchBlur = () => {
+  setTimeout(() => {
+    showSearchDropdown.value = false
+  }, 200)
+}
+
+const applySearchFromHistory = (query: string) => {
+  searchQuery.value = query
+  handleSearch()
+}
+
+const clearSearchHistory = () => {
+  searchStore.clearHistory()
 }
 </script>
 
@@ -78,144 +245,308 @@ const toggleMobileMenu = () => {
 @import '@/assets/styles/mixins'
 
 .app-header
-    // Фиксируем header наверху при прокрутке
-    position: sticky
-    top: 0
-    z-index: $z-index-dropdown
-    background: white
-    border-bottom: 1px solid $gray-200
+  position: sticky
+  top: 0
+  z-index: $z-index-dropdown
+  background: white
+  border-bottom: 1px solid $gray-200
 
-    // Контейнер с ограничением ширины
-    &__container
-        max-width: $breakpoint-desktop
-        margin: 0 auto
-        padding: 16px 24px // явные значения вместо $spacing-unit
-        display: flex
-        align-items: center
-        justify-content: space-between
-        gap: 24px
-
-    // Уменьшаем padding на мобильных
+  &__container
+    max-width: $breakpoint-desktop
+    margin: 0 auto
+    padding: 16px 24px
+    display: flex
+    align-items: center
+    justify-content: space-between
+    gap: 24px
+    
     @include mobile
-        padding: 16px
+      padding: 16px
 
-    // Логотип приложения
-    &__logo
-        display: flex
-        align-items: center
-        text-decoration: none
-        color: $text-light
-        font-weight: 700
-        font-size: 24px
-        transition: color $transition-fast
-
-    // Зелёный при наведении
+  &__logo-link
+    display: flex
+    align-items: center
+    text-decoration: none
+    color: $text-light
+    font-weight: 700
+    font-size: 24px
+    transition: color $transition-fast
+    
     &:hover
-        color: $primary-color
+      color: $primary-color
 
-    &__logo-text
-    // Можно добавить иконку/изображение логотипа позже
-        white-space: nowrap
+  &__logo-icon
+    width: 32px
+    height: 32px
+    margin-right: 8px
 
-    &__nav
-        @include laptop
-            display: none
-    &__list
-        display: flex
-        gap: 10px
+  &__logo-text
+    white-space: nowrap
+    
+    @include mobile
+      display: none
 
-    &__item
-        
-    // Ссылки навигации
-    &__link
-        color: $text-light
-        text-decoration: none
-        font-weight: 500
-        transition: color $transition-fast
-        position: relative
+  &__nav
+    @include laptop
+      display: none
+      
+  &__list
+    display: flex
+    gap: 15px
 
-    // Подчёркивание при наведении
+  &__link
+    color: $text-light
+    text-decoration: none
+    font-weight: 500
+    transition: color $transition-fast
+    position: relative
+    
     &:hover
-        color: $primary-color
+      color: $primary-color
 
-    // Активная ссылка (текущая страница)
     &.router-link-active
-        color: $primary-color
-        
-        // Зелёная линия снизу для активной ссылки
-        &::after
-            content: ''
-            position: absolute
-            bottom: -16px
-            left: 0
-            right: 0
-            height: 2px
-            background: $primary-color
+      color: $primary-color
+      
+      &::after
+        content: ''
+        position: absolute
+        bottom: -16px
+        left: 0
+        right: 0
+        height: 2px
+        background: $primary-color
 
-    // Правая часть header
-    &__actions
-        display: flex
-        align-items: center
-        gap: 16px
+  &__actions
+    display: flex
+    align-items: center
+    gap: 16px
 
-    // Поле поиска
-    &__search
-        display: flex
-
-    // Скрываем на мобильных (будет в мобильном меню)
+  // Обновлённые стили поиска
+  &__search
+    position: relative
+  
+  &__search-wrapper
+    display: flex
+    align-items: center
+    gap: 8px
+    padding: 8px 16px
+    background: $gray-100
+    border: 2px solid transparent
+    border-radius: $radius
+    transition: all $transition-fast
+    
+    &:focus-within
+      background: white
+      border-color: $primary-color
+  
+  &__search-icon
+    font-size: 14px
+    color: $gray-400
+  
+  &__search-inp
+    max-width: 200px
+    width: 100%
+    background: transparent
+    font-size: 14px
+    color: $text-light
+    outline: none
+    
     @include tablet
-        display: none
-
-    &__search-inp
-        width: 250px
-        padding: 8px 16px
-        border: 1px solid $gray-300
-        border-radius: $radius-sm
-        font-size: 14px
-        transition: all $transition-fast
-
-    // Фокус - зелёная рамка
-    &:focus
-        outline: none
-        border-color: $primary-color
-        box-shadow: 0 0 0 3px rgba(0, 220, 130, 0.1)
-
-    // Placeholder стили
+      max-width: 150px
+    
+    @include mobile
+      max-width: 100px
+    
     &::placeholder
+      color: $gray-400
+  
+  &__search-clear
+    display: flex
+    align-items: center
+    justify-content: center
+    width: 20px
+    height: 20px
+    background: $gray-300
+    border: none
+    border-radius: 50%
+    font-size: 10px
+    color: $gray-600
+    cursor: pointer
+    flex-shrink: 0
+    
+    &:hover
+      background: $gray-400
+      color: white
+  
+  &__search-dropdown
+    position: absolute
+    top: calc(100% + 8px)
+    left: 0
+    right: 0
+    background: white
+    border-radius: $radius
+    box-shadow: $shadow-lg
+    z-index: $z-index-dropdown
+    overflow: hidden
+    
+    &-header
+      display: flex
+      justify-content: space-between
+      align-items: center
+      padding: 12px 16px
+      border-bottom: 1px solid $gray-100
+      font-size: 13px
+      color: $gray-500
+      
+      button
+        background: none
+        border: none
+        color: $primary-color
+        cursor: pointer
+        
+        &:hover
+          text-decoration: underline
+    
+    ul
+      list-style: none
+      max-height: 200px
+      overflow-y: auto
+      margin: 0
+      padding: 0
+    
+    li
+      display: flex
+      align-items: center
+      gap: 12px
+      padding: 10px 16px
+      cursor: pointer
+      transition: background $transition-fast
+      
+      &:hover
+        background: $gray-50
+      
+      span:first-child
         color: $gray-400
 
-    // Кнопки входа/регистрации
-    &__btns
-        display: flex
-        gap: 8px
+  &__btns
+    display: flex
+    gap: 8px
+    
+    a
+      text-decoration: none
 
-    // Скрываем на планшетах и мобильных
     @include laptop
-        display: none
+      display: none
+  
+  &__user
+    position: relative
+  
+  &__user-menu
+    display: flex
+    align-items: center
+    gap: 8px
+    padding: 6px 12px
+    background: $gray-100
+    border-radius: $radius-full
+    cursor: pointer
+    transition: all $transition-fast
+    
+    &:hover
+      background: $gray-200
+  
+  &__avatar
+    width: 32px
+    height: 32px
+    background: $primary-color
+    color: white
+    border-radius: 50%
+    display: flex
+    align-items: center
+    justify-content: center
+    font-weight: 600
+    font-size: 14px
+  
+  &__user-name
+    font-size: 14px
+    font-weight: 500
+    color: $text-light
+    
+    @include tablet
+      display: none
+  
+  &__dropdown-icon
+    font-size: 10px
+    color: $gray-400
+    transition: transform $transition-fast
+  
+  &__dropdown
+    position: absolute
+    top: calc(100% + 8px)
+    right: 0
+    min-width: 200px
+    background: white
+    border-radius: $radius
+    box-shadow: $shadow-lg
+    padding: 8px 0
+    z-index: $z-index-dropdown
+  
+  &__dropdown-item
+    display: flex
+    align-items: center
+    gap: 8px
+    width: 100%
+    padding: 10px 16px
+    background: none
+    border: none
+    font-size: 14px
+    color: $text-light
+    text-decoration: none
+    cursor: pointer
+    transition: background $transition-fast
+    
+    &:hover
+      background: $gray-100
+    
+    &--danger
+      color: $error-color
+      
+      &:hover
+        background: rgba($error-color, 0.1)
+  
+  &__dropdown-divider
+    margin: 8px 0
+    border: none
+    border-top: 1px solid $gray-200
 
-    // Бургер меню для мобильных
-    &__burger
-        display: none
-        flex-direction: column
-        justify-content: space-between
-        width: 28px
-        height: 20px
-        padding: 0
-        cursor: pointer
+  &__burger
+    display: none
+    flex-direction: column
+    justify-content: space-between
+    width: 28px
+    height: 20px
+    padding: 0
+    background: none
+    border: none
+    cursor: pointer
 
-    // Показываем только на планшетах и мобильных
     @include laptop
-        display: flex
+      display: flex
 
-    // Линии бургер-меню
-    &__burger-line
-        width: 100%
-        height: 3px
-        background: $text-light
-        border-radius: 2px
-        transition: all $transition-fast
+  &__burger-line
+    width: 100%
+    height: 3px
+    background: $text-light
+    border-radius: 2px
+    transition: all $transition-fast
 
-    // При наведении делаем зелёными
     .app-header__burger:hover &
-        background: $primary-color
+      background: $primary-color
+
+// Анимация dropdown
+.dropdown-enter-active, .dropdown-leave-active
+  transition: all 0.2s ease
+
+.dropdown-enter-from, .dropdown-leave-to
+  opacity: 0
+  transform: translateY(-8px)
 </style>

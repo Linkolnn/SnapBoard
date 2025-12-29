@@ -8,18 +8,39 @@
       </div>
     </section>
     
-    <!-- Галерея с правильным контейнером -->
+    <!-- Галерея с бесконечным скроллом -->
     <section class="home-page__gallery">
       <div class="home-page__container">
-        <h2>Популярные изображения</h2>
+        <h2>{{ galleryTitle }}</h2>
         
-        <!-- Masonry Grid - занимает всю ширину контейнера -->
+        <!-- Masonry Grid -->
         <ImageMasonryGrid
-          :images="mockImages"
-          :is-loading="isLoading"
+          :images="displayedImages"
+          :is-loading="isLoading && displayedImages.length === 0"
           :min-column-width="250"
           :gap="16"
           @image-click="handleImageClick"
+        />
+        
+        <!-- Пустое состояние при поиске -->
+        <div v-if="hasActiveFilters && !isLoading && displayedImages.length === 0" class="home-page__no-results">
+          <div class="home-page__no-results-icon">🔍</div>
+          <h3>Ничего не найдено</h3>
+          <p>Попробуйте изменить параметры поиска</p>
+          <button class="home-page__clear-btn" @click="clearFilters">
+            Сбросить фильтры
+          </button>
+        </div>
+        
+        <!-- Infinite Scroll Loader (только если нет активных фильтров) -->
+        <InfiniteScrollLoadMore
+          v-if="!hasActiveFilters"
+          :is-loading="isLoading"
+          :has-more="hasMore"
+          :error="error"
+          :item-count="items.length"
+          @retry="retry"
+          @sentinel-mounted="handleSentinelMounted"
         />
       </div>
     </section>
@@ -27,109 +48,54 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { useInfiniteScroll } from '~/composables/useInfiniteScroll'
+import { useSearch } from '~/composables/useSearch'
 import type { Image } from '~/types'
 
-const isLoading = ref(true)
+// Используем infinite scroll для главной страницы
+const {
+  items,
+  isLoading,
+  hasMore,
+  error,
+  retry,
+  sentinelRef
+} = useInfiniteScroll({
+  boardId: 'home',
+  config: {
+    pageSize: 12,
+    threshold: 200,
+    initialLoad: true
+  }
+})
 
-/**
- * Mock изображения с разными URL для тестирования
- */
-const mockImages = ref<Image[]>([
-  {
-    id: '1',
-    url: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=350',
-    title: 'Горный пейзаж',
-    description: 'Удивительный вид на горы',
-    boardId: '1',
-    userId: '1',
-    tags: ['природа', 'горы'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    url: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=400&h=300',
-    title: 'Архитектура',
-    description: 'Современное здание',
-    boardId: '1',
-    userId: '1',
-    tags: ['архитектура'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '3',
-    url: 'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=400&h=500',
-    title: 'Интерьер',
-    boardId: '1',
-    userId: '1',
-    tags: ['интерьер', 'дизайн'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '4',
-    url: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400',
-    title: 'Еда',
-    description: 'Вкусная еда',
-    boardId: '1',
-    userId: '1',
-    tags: ['еда'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '5',
-    url: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=550',
-    title: 'Мода',
-    boardId: '1',
-    userId: '1',
-    tags: ['мода'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '6',
-    url: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=350',
-    title: 'Искусство',
-    boardId: '1',
-    userId: '1',
-    tags: ['искусство'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '7',
-    url: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=450',
-    title: 'Путешествия',
-    boardId: '1',
-    userId: '1',
-    tags: ['путешествия'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '8',
-    url: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=350',
-    title: 'Природа',
-    boardId: '1',
-    userId: '1',
-    tags: ['природа'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '9',
-    url: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=450',
-    title: 'Путешествия',
-    boardId: '1',
-    userId: '1',
-    tags: ['путешествия'],
-    createdAt: new Date().toISOString()
-  },
-])
+// Поиск и фильтрация
+const { filteredImages, hasActiveFilters, clearFilters } = useSearch()
+
+// Отображаемые изображения с учётом фильтра
+const displayedImages = computed(() => {
+  if (hasActiveFilters.value) {
+    return filteredImages.value
+  }
+  return items.value
+})
+
+// Заголовок галереи
+const galleryTitle = computed(() => {
+  if (hasActiveFilters.value) {
+    return `Результаты поиска (${displayedImages.value.length})`
+  }
+  return 'Популярные изображения'
+})
+
+const handleSentinelMounted = (element: HTMLElement | null) => {
+  sentinelRef.value = element
+}
 
 const handleImageClick = (image: Image) => {
   console.log('Image clicked:', image)
+  // TODO: Открыть модальное окно с изображением
 }
-
-onMounted(() => {
-  // Имитация загрузки
-  isLoading.value = false
-})
 </script>
 
 <style lang="sass" scoped>
@@ -139,7 +105,6 @@ onMounted(() => {
 .home-page
   width: 100%
   
-  // Контейнер с max-width и padding
   &__container
     max-width: $breakpoint-desktop
     margin: 0 auto
@@ -176,4 +141,40 @@ onMounted(() => {
       
       @include mobile
         font-size: 24px
+  
+  &__no-results
+    text-align: center
+    padding: 64px 24px
+    background: white
+    border-radius: $radius-lg
+    
+    &-icon
+      font-size: 64px
+      margin-bottom: 16px
+    
+    h3
+      font-size: 24px
+      color: $text-light
+      margin-bottom: 8px
+    
+    p
+      color: $gray-400
+      margin-bottom: 24px
+  
+  &__clear-btn
+    display: inline-flex
+    align-items: center
+    gap: 8px
+    padding: 12px 24px
+    background: $primary-color
+    color: white
+    border: none
+    border-radius: $radius
+    font-size: 16px
+    font-weight: 600
+    cursor: pointer
+    transition: background $transition-fast
+    
+    &:hover
+      background: darken($primary-color, 8%)
 </style>

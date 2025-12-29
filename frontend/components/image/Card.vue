@@ -1,22 +1,23 @@
 <template>
   <article 
     class="img-card"
-    :class="{ 'img-card--loaded': isLoaded }"
+    :class="{ 
+      'img-card--loaded': isLoaded,
+      'img-card--loading': !isLoaded
+    }"
     @click="handleClick"
   >
     <!-- Skeleton пока не загружено -->
-    <ImageSkeleton 
-      v-if="!isLoaded"
-      :height="estimatedHeight"
-    />
+    <div v-if="!isLoaded" class="img-card__skeleton">
+      <div class="img-card__skeleton-shimmer"></div>
+    </div>
     
-    <!-- Изображение - используем v-if вместо v-show -->
+    <!-- Изображение -->
     <img
-      v-if="isLoaded"
       :src="image.url"
       :alt="image.title || 'Image'"
       class="img-card__img"
-      loading="lazy"
+      :class="{ 'img-card__img--hidden': !isLoaded }"
       @load="handleImageLoad"
       @error="handleImageError"
     />
@@ -51,32 +52,21 @@ import type { Image } from '~/types'
 
 interface Props {
   image: Image
-  estimatedHeight?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  estimatedHeight: 300
-})
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   click: [image: Image]
-  load: [height: number]
 }>()
 
-const isLoaded = ref(true)
+const isLoaded = ref(false)
 
 /**
  * Обработчик загрузки изображения
  */
-const handleImageLoad = (event: Event) => {
-  const img = event.target as HTMLImageElement
-    
-  // Эмитим высоту ДО изменения состояния
-  emit('load', img.offsetHeight)
-  
-  // Затем меняем состояние
+const handleImageLoad = () => {
   isLoaded.value = true
-  
 }
 
 /**
@@ -84,7 +74,6 @@ const handleImageLoad = (event: Event) => {
  */
 const handleImageError = () => {
   console.error('Failed to load image:', props.image.url)
-  emit('load', props.estimatedHeight)
   isLoaded.value = true
 }
 
@@ -92,14 +81,13 @@ const handleImageError = () => {
  * Клик по карточке
  */
 const handleClick = () => {
-  if (isLoaded.value) {
-    emit('click', props.image)
-  }
+  emit('click', props.image)
 }
 </script>
 
 <style lang="sass" scoped>
 @import '@/assets/styles/variables'
+@import '@/assets/styles/mixins'
 
 .img-card
   position: relative
@@ -117,11 +105,34 @@ const handleClick = () => {
     .img-card__overlay
       opacity: 1
   
+  &__skeleton
+    width: 100%
+    height: 300px
+    background: $gray-200
+    position: relative
+    overflow: hidden
+    
+    &-shimmer
+      position: absolute
+      top: 0
+      left: 0
+      right: 0
+      bottom: 0
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)
+      animation: shimmer 1.5s infinite
+  
   &__img
     width: 100%
     height: auto
     display: block
     animation: fadeIn 0.3s ease-in
+    
+    &--hidden
+      position: absolute
+      width: 1px
+      height: 1px
+      opacity: 0
+      overflow: hidden
   
   &__overlay
     position: absolute
@@ -129,12 +140,21 @@ const handleClick = () => {
     left: 0
     right: 0
     bottom: 0
-    background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.7) 100%)
+    background: linear-gradient(to bottom, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.7) 100%)
     display: flex
     align-items: flex-end
     padding: 16px
     opacity: 0
     transition: opacity $transition-normal
+    
+    // На мобильных и планшетах overlay всегда видим
+    @include mobile
+      opacity: 1
+      background: linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(0, 0, 0, 0.6) 100%)
+    
+    @include tablet
+      opacity: 1
+      background: linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(0, 0, 0, 0.6) 100%)
   
   &__info
     width: 100%
@@ -148,6 +168,9 @@ const handleClick = () => {
     -webkit-line-clamp: 2
     -webkit-box-orient: vertical
     overflow: hidden
+    
+    @include mobile
+      font-size: 14px
   
   &__desc
     font-size: 14px
@@ -157,11 +180,17 @@ const handleClick = () => {
     -webkit-line-clamp: 2
     -webkit-box-orient: vertical
     overflow: hidden
+    
+    @include mobile
+      display: none
   
   &__tags
     display: flex
     gap: 8px
     flex-wrap: wrap
+    
+    @include mobile
+      gap: 4px
   
   &__tag
     font-size: 12px
@@ -169,10 +198,20 @@ const handleClick = () => {
     background: rgba(255, 255, 255, 0.2)
     border-radius: $radius-sm
     backdrop-filter: blur(4px)
+    
+    @include mobile
+      font-size: 11px
+      padding: 2px 6px
 
 @keyframes fadeIn
   from
     opacity: 0
   to
     opacity: 1
+
+@keyframes shimmer
+  0%
+    transform: translateX(-100%)
+  100%
+    transform: translateX(100%)
 </style>

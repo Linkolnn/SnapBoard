@@ -126,6 +126,9 @@ const handleSubmit = async () => {
 
 .login-form
   width: 100%
+  display: flex
+  flex-direction: column
+
   
   // Заголовок формы
   &__header
@@ -147,6 +150,8 @@ const handleSubmit = async () => {
     display: flex
     flex-direction: column
     gap: 24px
+    max-width: 400px
+    width: 100%
   
   // Ссылка "Забыли пароль?"
   &__forgot

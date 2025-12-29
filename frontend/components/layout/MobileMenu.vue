@@ -16,14 +16,6 @@
                         </button>
                     </header>
 
-                    <div class="mobile-menu__search">
-                        <input 
-                            type="search" 
-                            placeholder="Поиск..."
-                            class="mobile-menu__search-inp"
-                        />
-                    </div>
-
                     <nav class="mobile-menu__nav">
                         <ul class="mobile-menu__list">
                             <li 
@@ -41,12 +33,24 @@
                         </ul>
                     </nav>
 
-                    <div class="mobile-menu__btns">
-                        <CommonBaseButton variant="outline" @click="close">
-                            Войти
-                        </CommonBaseButton>
-                        <CommonBaseButton variant="primary" @click="close">
-                            Регистрация
+                    <!-- Кнопки для неавторизованных -->
+                    <div v-if="!isAuthenticated" class="mobile-menu__btns">
+                        <NuxtLink to="/login" @click="close">
+                            <CommonBaseButton variant="outline" class="mobile-menu__btn">
+                                Войти
+                            </CommonBaseButton>
+                        </NuxtLink>
+                        <NuxtLink to="/register" @click="close">
+                            <CommonBaseButton variant="primary" class="mobile-menu__btn">
+                                Регистрация
+                            </CommonBaseButton>
+                        </NuxtLink>
+                    </div>
+                    
+                    <!-- Кнопка выхода для авторизованных -->
+                    <div v-else class="mobile-menu__btns">
+                        <CommonBaseButton variant="outline" class="mobile-menu__btn mobile-menu__btn--danger" @click="handleLogout">
+                            🚪 Выйти
                         </CommonBaseButton>
                     </div>
                 </article>
@@ -56,27 +60,36 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue';
+import { watch } from 'vue'
 
 interface NavItem {
     link: string
     text: string
-};
+}
 
 interface Props {
     modelValue: boolean
     navItems: NavItem[]
-};
+    isAuthenticated?: boolean
+}
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    isAuthenticated: false
+})
 
 const emit = defineEmits<{
     'update:modelValue': [value: boolean]
-}>();
+    'logout': []
+}>()
 
 const close = () => {
     emit('update:modelValue', false)
-};
+}
+
+const handleLogout = () => {
+    close()
+    emit('logout')
+}
 
 watch(
     () => props.modelValue,
@@ -87,7 +100,7 @@ watch(
             document.body.style.overflow = ''
         }
     }
-);
+)
 </script>
 <style lang="sass" scoped>
 @import '@/assets/styles/variables'
@@ -144,25 +157,6 @@ watch(
       background: $gray-100
       color: $text-light
   
-  // Поиск в мобильном меню
-  &__search
-    padding: 16px 24px
-    border-bottom: 1px solid $gray-200
-  
-  &__search-inp
-    width: 100%
-    padding: 12px
-    border: 1px solid $gray-300
-    border-radius: $radius-sm
-    font-size: 14px
-    
-    &:focus
-      outline: none
-      border-color: $primary-color
-    
-    &::placeholder
-      color: $gray-400
-  
   // Список навигационных ссылок
   &__list
     list-style: none
@@ -194,6 +188,19 @@ watch(
     display: flex
     flex-direction: column
     gap: 16px
+    
+    a
+      text-decoration: none
+  
+  &__btn
+    width: 100%
+    
+    &--danger
+      color: $error-color
+      border-color: $error-color
+      
+      &:hover
+        background: rgba($error-color, 0.1)
 
 // Анимации выезда меню справа
 .mobile-menu-enter-active,

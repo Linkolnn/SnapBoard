@@ -76,3 +76,13 @@ export interface UploadConfig {
   allowedTypes: string[]
   allowedExtensions: string[]
 }
+
+/**
+ * Контекст просмотра изображения
+ */
+export interface ImageViewContext {
+  currentIndex: number
+  totalImages: number
+  hasNext: boolean
+  hasPrev: boolean
+}

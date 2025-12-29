@@ -1,15 +1,15 @@
 <template>
   <main class="board-page">
     <div class="board-page__container">
-      <div v-if="isLoading" class="board-page__loading">
+      <div v-if="boardLoading && !currentBoard" class="board-page__loading">
         <div class="board-page__spinner"></div>
         <p>Загрузка доски...</p>
       </div>
 
-      <div v-else-if="error || !currentBoard" class="board-page__error">
+      <div v-else-if="boardError || !currentBoard" class="board-page__error">
         <div class="board-page__error-icon">😕</div>
         <h2>Доска не найдена</h2>
-        <p>{{ error || 'Возможно, она была удалена' }}</p>
+        <p>{{ boardError || 'Возможно, она была удалена' }}</p>
         <NuxtLink to="/boards" class="board-page__back-btn">Вернуться к доскам</NuxtLink>
       </div>
 
@@ -24,7 +24,7 @@
             </div>
             <p v-if="currentBoard.description" class="board-page__desc">{{ currentBoard.description }}</p>
             <div class="board-page__meta">
-              <span>{{ boardImages.length }} изображений</span>
+              <span>{{ displayedImages.length }} изображений</span>
               <span>•</span>
               <span>Обновлено {{ formatDate(currentBoard.updatedAt) }}</span>
             </div>
@@ -38,19 +38,48 @@
           </div>
         </header>
 
+        <!-- Панель поиска -->
+        <SearchPanel 
+          :board-id="boardId" 
+          class="board-page__search"
+        />
+
         <section class="board-page__gallery">
-          <div v-if="boardImages.length" class="board-page__images">
-            <div v-for="image in boardImages" :key="image.id" class="board-page__image">
-              <img :src="image.url" :alt="image.title" loading="lazy" />
-            </div>
+          <!-- Masonry Grid -->
+          <ImageMasonryGrid
+            v-if="displayedImages.length"
+            :images="displayedImages"
+            :is-loading="infiniteLoading && displayedImages.length === 0"
+            @image-click="handleImageClick"
+          />
+
+          <!-- Пустое состояние при поиске -->
+          <div v-else-if="hasActiveFilters && !infiniteLoading" class="board-page__no-results">
+            <div class="board-page__no-results-icon">🔍</div>
+            <h2>Ничего не найдено</h2>
+            <p>Попробуйте изменить параметры поиска</p>
+            <button class="board-page__clear-btn" @click="clearFilters">
+              Сбросить фильтры
+            </button>
           </div>
 
-          <div v-else class="board-page__empty">
+          <!-- Пустое состояние без изображений -->
+          <div v-else-if="!displayedImages.length && !infiniteLoading" class="board-page__empty">
             <div class="board-page__empty-icon">🖼️</div>
             <h2>Изображений пока нет</h2>
             <p>Добавьте первое изображение в эту доску</p>
             <button class="board-page__upload-btn" @click="openUploadModal">📤 Загрузить изображения</button>
           </div>
+
+          <!-- Компонент загрузки / конца списка -->
+          <InfiniteScrollLoadMore
+            :is-loading="infiniteLoading"
+            :has-more="hasMore"
+            :error="loadError"
+            :item-count="displayedImages.length"
+            @retry="retry"
+            @sentinel-mounted="handleSentinelMounted"
+          />
         </section>
       </template>
     </div>
@@ -77,25 +106,87 @@
       @close="closeUploadModal"
       @uploaded="handleImagesUploaded"
     />
+
+    <ImageModal
+      v-if="selectedImage"
+      :is-open="isImageModalOpen"
+      :image="selectedImage"
+      :view-context="imageViewContext"
+      @close="closeImageModal"
+      @next="nextImage"
+      @prev="prevImage"
+      @update="handleImageUpdate"
+      @delete="handleImageDelete"
+    />
   </main>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useBoards } from '~/composables/useBoards'
-import { useImages } from '~/composables/useImages'
+import { useInfiniteScroll } from '~/composables/useInfiniteScroll'
+import { useSearch } from '~/composables/useSearch'
+import type { Image, ImageViewContext } from '~/types/image'
 import type { UpdateBoardDto } from '~/types/board'
 
 const route = useRoute()
-const { currentBoard, isLoading, error, loadBoard, updateBoard, clearCurrentBoard } = useBoards()
-const { loadBoardImages, getBoardImages } = useImages()
+const { currentBoard, isLoading: boardLoading, error: boardError, loadBoard, updateBoard, clearCurrentBoard } = useBoards()
 
 const boardId = computed(() => route.params.id as string)
-const boardImages = computed(() => getBoardImages(boardId.value))
 
+// Infinite Scroll
+const {
+  items: infiniteImages,
+  isLoading: infiniteLoading,
+  hasMore,
+  error: loadError,
+  loadMore,
+  reset,
+  retry,
+  sentinelRef
+} = useInfiniteScroll({
+  boardId: boardId.value,
+  config: {
+    pageSize: 12,
+    threshold: 200,
+    initialLoad: false
+  }
+})
+
+// Search & Filters
+const { 
+  filteredImages,
+  hasActiveFilters, 
+  clearFilters 
+} = useSearch(boardId.value)
+
+// Отображаемые изображения
+const displayedImages = computed(() => {
+  if (hasActiveFilters.value) {
+    return filteredImages.value
+  }
+  return infiniteImages.value
+})
+
+// Модальные окна
 const isEditModalOpen = ref(false)
 const isUploadModalOpen = ref(false)
+const isImageModalOpen = ref(false)
 const isSubmitting = ref(false)
+
+const selectedImage = ref<Image | null>(null)
+const selectedImageIndex = ref(-1)
+
+const imageViewContext = computed<ImageViewContext>(() => ({
+  currentIndex: selectedImageIndex.value,
+  totalImages: displayedImages.value.length,
+  hasNext: selectedImageIndex.value < displayedImages.value.length - 1,
+  hasPrev: selectedImageIndex.value > 0
+}))
+
+const handleSentinelMounted = (element: HTMLElement | null) => {
+  sentinelRef.value = element
+}
 
 const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('ru-RU', {
@@ -108,6 +199,49 @@ const closeEditModal = () => { isEditModalOpen.value = false }
 const openUploadModal = () => { isUploadModalOpen.value = true }
 const closeUploadModal = () => { isUploadModalOpen.value = false }
 
+const handleImageClick = (image: Image) => {
+  selectedImage.value = image
+  selectedImageIndex.value = displayedImages.value.findIndex(img => img.id === image.id)
+  isImageModalOpen.value = true
+  document.body.style.overflow = 'hidden'
+}
+
+const closeImageModal = () => {
+  isImageModalOpen.value = false
+  selectedImage.value = null
+  selectedImageIndex.value = -1
+  document.body.style.overflow = ''
+}
+
+const nextImage = () => {
+  if (imageViewContext.value.hasNext) {
+    selectedImageIndex.value++
+    selectedImage.value = displayedImages.value[selectedImageIndex.value] ?? null
+  }
+}
+
+const prevImage = () => {
+  if (imageViewContext.value.hasPrev) {
+    selectedImageIndex.value--
+    selectedImage.value = displayedImages.value[selectedImageIndex.value] ?? null
+  }
+}
+
+const handleImageUpdate = (updatedImage: Image) => {
+  selectedImage.value = updatedImage
+}
+
+const handleImageDelete = (_id: string) => {
+  if (displayedImages.value.length <= 1) {
+    closeImageModal()
+  } else if (selectedImageIndex.value >= displayedImages.value.length - 1) {
+    selectedImageIndex.value--
+    selectedImage.value = displayedImages.value[selectedImageIndex.value] ?? null
+  } else {
+    selectedImage.value = displayedImages.value[selectedImageIndex.value] ?? null
+  }
+}
+
 const handleEditSubmit = async (data: UpdateBoardDto) => {
   isSubmitting.value = true
   try {
@@ -119,23 +253,26 @@ const handleEditSubmit = async (data: UpdateBoardDto) => {
 }
 
 const handleImagesUploaded = () => {
-  console.log('Images uploaded successfully')
+  reset()
 }
 
 onMounted(async () => {
   await loadBoard(boardId.value)
   if (currentBoard.value) {
-    await loadBoardImages(boardId.value)
+    await loadMore()
   }
 })
 
-onUnmounted(() => clearCurrentBoard())
+onUnmounted(() => {
+  clearCurrentBoard()
+  document.body.style.overflow = ''
+})
 
 watch(boardId, async (newId) => {
   if (newId) {
     await loadBoard(newId)
     if (currentBoard.value) {
-      await loadBoardImages(newId)
+      await reset()
     }
   }
 })
@@ -245,7 +382,8 @@ watch(boardId, async (newId) => {
   &__actions
     display: flex
     gap: 12px
-    flex-wrap: wrap
+    @include mobile
+      flex-direction: column
 
   &__action-btn
     display: flex
@@ -272,23 +410,13 @@ watch(boardId, async (newId) => {
         border-color: darken($primary-color, 8%)
         color: white
 
+  &__search
+    margin-bottom: 24px
+
   &__gallery
     min-height: 400px
 
-  &__images
-    display: grid
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))
-    gap: 16px
-
-  &__image
-    border-radius: $radius-sm
-    overflow: hidden
-    img
-      width: 100%
-      height: auto
-      display: block
-
-  &__empty
+  &__empty, &__no-results
     text-align: center
     padding: 64px 24px
     background: white
@@ -304,7 +432,7 @@ watch(boardId, async (newId) => {
       color: $gray-400
       margin-bottom: 24px
 
-  &__upload-btn
+  &__upload-btn, &__clear-btn
     display: inline-flex
     align-items: center
     gap: 8px
