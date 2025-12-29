@@ -1,26 +1,40 @@
 /**
  * Единые настройки для masonry grid
+ * Брейкпоинты соответствуют variables.sass
  */
 export const MASONRY_CONFIG = {
   // Минимальная ширина колонки
   minColumnWidth: {
-    desktop: 280,
-    tablet: 220,
-    mobile: 140  // Уменьшено для 2 колонок на узких экранах
+    desktop: 280,    // > 1024px
+    laptop: 250,     // 768px - 1024px
+    tablet: 220,     // 576px - 768px
+    mobile: 140,     // 380px - 576px
+    narrow: 120      // < 380px (для 2 колонок на узких экранах)
   },
   
   // Отступы между элементами
   gap: {
     desktop: 16,
+    laptop: 14,
     tablet: 12,
-    mobile: 8
+    mobile: 8,
+    narrow: 6
   },
   
   // Максимальное количество колонок
   maxColumns: 6,
   
   // Минимальное количество колонок
-  minColumns: 2
+  minColumns: 2,
+  
+  // Брейкпоинты (соответствуют variables.sass)
+  breakpoints: {
+    desktop: 1440,
+    laptop: 1024,
+    tablet: 768,
+    mobile: 576,
+    narrow: 380  // Новый брейкпоинт для 2 колонок
+  }
 }
 
 /**
@@ -35,23 +49,43 @@ export function getMasonryConfig() {
   }
   
   const width = window.innerWidth
+  const { breakpoints, minColumnWidth, gap } = MASONRY_CONFIG
   
-  if (width < 576) {
+  // < 380px - узкие экраны, 2 колонки
+  if (width < breakpoints.narrow) {
     return {
-      minColumnWidth: MASONRY_CONFIG.minColumnWidth.mobile,
-      gap: MASONRY_CONFIG.gap.mobile
+      minColumnWidth: minColumnWidth.narrow,
+      gap: gap.narrow
     }
   }
   
-  if (width < 1024) {
+  // 380px - 576px - mobile
+  if (width < breakpoints.mobile) {
     return {
-      minColumnWidth: MASONRY_CONFIG.minColumnWidth.tablet,
-      gap: MASONRY_CONFIG.gap.tablet
+      minColumnWidth: minColumnWidth.mobile,
+      gap: gap.mobile
     }
   }
   
+  // 576px - 768px - tablet
+  if (width < breakpoints.tablet) {
+    return {
+      minColumnWidth: minColumnWidth.tablet,
+      gap: gap.tablet
+    }
+  }
+  
+  // 768px - 1024px - laptop
+  if (width < breakpoints.laptop) {
+    return {
+      minColumnWidth: minColumnWidth.laptop,
+      gap: gap.laptop
+    }
+  }
+  
+  // > 1024px - desktop
   return {
-    minColumnWidth: MASONRY_CONFIG.minColumnWidth.desktop,
-    gap: MASONRY_CONFIG.gap.desktop
+    minColumnWidth: minColumnWidth.desktop,
+    gap: gap.desktop
   }
 }

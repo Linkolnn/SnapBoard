@@ -17,8 +17,6 @@
         <ImageMasonryGrid
           :images="displayedImages"
           :is-loading="isLoading && displayedImages.length === 0"
-          :min-column-width="250"
-          :gap="16"
           @image-click="handleImageClick"
         />
         
@@ -44,13 +42,26 @@
         />
       </div>
     </section>
+    
+    <!-- Полноэкранный просмотр -->
+    <ImageFullscreenModal
+      :is-open="isModalOpen"
+      :image="selectedImage"
+      :view-context="viewContext"
+      :all-images="displayedImages"
+      @close="closeModal"
+      @next="nextImage"
+      @prev="prevImage"
+      @image-select="selectImage"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useInfiniteScroll } from '~/composables/useInfiniteScroll'
 import { useSearch } from '~/composables/useSearch'
-import type { Image } from '~/types'
+import type { Image, ImageViewContext } from '~/types/image'
 
 // Используем infinite scroll для главной страницы
 const {
@@ -88,13 +99,55 @@ const galleryTitle = computed(() => {
   return 'Популярные изображения'
 })
 
+// Модальное окно
+const isModalOpen = ref(false)
+const selectedImage = ref<Image | null>(null)
+const selectedIndex = ref(0)
+
+const viewContext = computed<ImageViewContext>(() => ({
+  currentIndex: selectedIndex.value,
+  totalImages: displayedImages.value.length,
+  hasPrev: selectedIndex.value > 0,
+  hasNext: selectedIndex.value < displayedImages.value.length - 1
+}))
+
 const handleSentinelMounted = (element: HTMLElement | null) => {
   sentinelRef.value = element
 }
 
 const handleImageClick = (image: Image) => {
-  console.log('Image clicked:', image)
-  // TODO: Открыть модальное окно с изображением
+  const index = displayedImages.value.findIndex(img => img.id === image.id)
+  if (index !== -1) {
+    selectedIndex.value = index
+    selectedImage.value = image
+    isModalOpen.value = true
+  }
+}
+
+const closeModal = () => {
+  isModalOpen.value = false
+}
+
+const nextImage = () => {
+  if (selectedIndex.value < displayedImages.value.length - 1) {
+    selectedIndex.value++
+    selectedImage.value = displayedImages.value[selectedIndex.value] ?? null
+  }
+}
+
+const prevImage = () => {
+  if (selectedIndex.value > 0) {
+    selectedIndex.value--
+    selectedImage.value = displayedImages.value[selectedIndex.value] ?? null
+  }
+}
+
+const selectImage = (image: Image) => {
+  const index = displayedImages.value.findIndex(img => img.id === image.id)
+  if (index !== -1) {
+    selectedIndex.value = index
+    selectedImage.value = image
+  }
 }
 </script>
 
