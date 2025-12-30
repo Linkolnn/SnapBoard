@@ -58,7 +58,7 @@ export function useInfiniteScroll(options: UseInfiniteScrollOptions): UseInfinit
   const createPageRequest = (pageNum: number): PageRequest => ({
     page: pageNum,
     pageSize: mergedConfig.pageSize!,
-    boardId,
+    boardId: boardId === 'home' ? undefined : boardId,
     query: query.value || undefined,
     tags: selectedTags.value.length > 0 ? selectedTags.value : undefined,
     sortBy: sortBy.value

@@ -83,7 +83,7 @@ import type { UpdateProfileDto, ChangePasswordDto } from '~/types/user'
 import type { Image } from '~/types/image'
 
 definePageMeta({
-  middleware: ['auth']
+  title: 'Профиль - SnapBoard'
 })
 
 useHead({

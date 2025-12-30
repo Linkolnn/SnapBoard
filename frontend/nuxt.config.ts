@@ -16,7 +16,7 @@ export default defineNuxtConfig({
     headers: {
       crossOriginEmbedderPolicy: process.env.NODE_ENV === 'development' ? 'unsafe-none' : 'require-corp',
       contentSecurityPolicy: {
-        'img-src': ["'self'", 'data:', 'https:'],
+        'img-src': ["'self'", 'data:', 'https:', 'http://localhost:3001'],
         'script-src': ["'self'", "'unsafe-inline'"],
       }
     },
@@ -26,9 +26,9 @@ export default defineNuxtConfig({
     }
   },
 
-    // Pinia конфигурация
+  // Pinia конфигурация
   pinia: {
-    storesDirs: ['./stores/**'], // путь к stores
+    storesDirs: ['./stores/**'],
   },
 
   app: {
@@ -45,19 +45,32 @@ export default defineNuxtConfig({
     }
   },
 
-    // ... остальная конфигурация
-  
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE_URL || 'http://localhost:3001/api'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3001/api'
     }
   },
-  
-  // Настройки для работы с cookies
+
+  // Proxy API requests to backend
   nitro: {
-    experimental: {
-      // Включаем поддержку cookies в SSR
-      payloadExtraction: false
+    routeRules: {
+      '/api/**': { proxy: 'http://backend:3001/api/**' },
+      '/uploads/**': { proxy: 'http://backend:3001/uploads/**' }
+    }
+  },
+
+  vite: {
+    server: {
+      proxy: {
+        '/api': {
+          target: 'http://backend:3001',
+          changeOrigin: true
+        },
+        '/uploads': {
+          target: 'http://backend:3001',
+          changeOrigin: true
+        }
+      }
     }
   },
 })

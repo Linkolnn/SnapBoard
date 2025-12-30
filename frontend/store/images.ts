@@ -18,20 +18,63 @@ import {
   DEFAULT_UPLOAD_CONFIG 
 } from '~/utils/fileHelpers'
 
+interface ImageResponse {
+  id: string
+  url: string
+  title?: string
+  description?: string
+  tags?: string[]
+  width?: number
+  height?: number
+  size?: number
+  boardId?: string
+  userId: string
+  isFavorite?: boolean
+  user?: {
+    id: string
+    username: string
+    avatar?: string
+  }
+  createdAt: string
+  updatedAt?: string
+}
+
+interface UploadResponse {
+  image: ImageResponse
+  message: string
+}
+
 export const useImagesStore = defineStore('images', () => {
-  // State
   const images = ref<Image[]>([])
   const uploadQueue = ref<UploadQueueItem[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  // Pagination State
   const pagination = ref<PaginationState>({
     page: 1,
     pageSize: 12,
     hasMore: true,
     isLoading: false,
     error: null
+  })
+
+  const { get, put, del, upload } = useApi()
+
+  // Преобразование ответа API
+  const mapImageResponse = (data: ImageResponse): Image => ({
+    id: data.id,
+    url: data.url,
+    title: data.title || '',
+    description: data.description,
+    tags: data.tags,
+    width: data.width,
+    height: data.height,
+    size: data.size,
+    boardId: data.boardId,
+    userId: data.userId,
+    isFavorite: data.isFavorite,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt
   })
 
   // Getters
@@ -61,27 +104,30 @@ export const useImagesStore = defineStore('images', () => {
 
   // Actions
 
-  /**
-   * Загрузка изображений доски
-   */
-  const fetchBoardImages = async (boardId: string) => {
+  const fetchBoardImages = async (boardId: string, page = 1, pageSize = 12) => {
     isLoading.value = true
     error.value = null
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 500))
-      images.value = getMockImages(boardId)
-    } catch (e) {
-      error.value = 'Не удалось загрузить изображения'
+      const response = await get<PaginatedResponse<ImageResponse>>(
+        `/boards/${boardId}/images?page=${page}&pageSize=${pageSize}`
+      )
+      images.value = response.items.map(mapImageResponse)
+      pagination.value = {
+        page: response.page,
+        pageSize: response.pageSize,
+        hasMore: response.hasMore,
+        isLoading: false,
+        error: null
+      }
+    } catch (e: any) {
+      error.value = e.data?.message || 'Не удалось загрузить изображения'
       console.error('Error fetching images:', e)
     } finally {
       isLoading.value = false
     }
   }
 
-  /**
-   * Добавление файлов в очередь загрузки
-   */
   const addFilesToQueue = async (files: File[], boardId: string) => {
     const validFiles: UploadQueueItem[] = []
 
@@ -115,9 +161,6 @@ export const useImagesStore = defineStore('images', () => {
     return validFiles
   }
 
-  /**
-   * Добавление URL в очередь загрузки
-   */
   const addUrlToQueue = (url: string, boardId: string): UploadQueueItem | null => {
     const validation = validateImageUrl(url)
     if (!validation.valid) {
@@ -140,9 +183,6 @@ export const useImagesStore = defineStore('images', () => {
     return item
   }
 
-  /**
-   * Обновление метаданных элемента очереди
-   */
   const updateQueueItem = (id: string, data: Partial<Omit<UploadQueueItem, 'id'>>) => {
     const index = uploadQueue.value.findIndex(item => item.id === id)
     if (index !== -1) {
@@ -153,9 +193,6 @@ export const useImagesStore = defineStore('images', () => {
     }
   }
 
-  /**
-   * Удаление из очереди
-   */
   const removeFromQueue = (id: string) => {
     const index = uploadQueue.value.findIndex(item => item.id === id)
     if (index !== -1) {
@@ -163,16 +200,10 @@ export const useImagesStore = defineStore('images', () => {
     }
   }
 
-  /**
-   * Очистка очереди
-   */
   const clearQueue = () => {
     uploadQueue.value = []
   }
 
-  /**
-   * Загрузка одного элемента
-   */
   const uploadItem = async (id: string): Promise<Image | null> => {
     const item = uploadQueue.value.find(i => i.id === id)
     if (!item) return null
@@ -180,37 +211,50 @@ export const useImagesStore = defineStore('images', () => {
     updateQueueItem(id, { status: 'uploading', progress: 0 })
 
     try {
-      for (let progress = 0; progress <= 100; progress += 10) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-        updateQueueItem(id, { progress })
+      let response: UploadResponse
+
+      if (item.file) {
+        // Загрузка файла
+        const formData = new FormData()
+        formData.append('file', item.file)
+        if (item.title) formData.append('title', item.title)
+        if (item.description) formData.append('description', item.description)
+        if (item.tags?.length) formData.append('tags', item.tags.join(','))
+        if (item.boardId) formData.append('boardId', item.boardId)
+
+        response = await upload<UploadResponse>(
+          '/upload/file',
+          formData,
+          (progress: number) => updateQueueItem(id, { progress })
+        )
+      } else if (item.url) {
+        // Загрузка по URL
+        const { post } = useApi()
+        response = await post<UploadResponse>('/upload/url', {
+          url: item.url,
+          title: item.title,
+          description: item.description,
+          tags: item.tags,
+          boardId: item.boardId
+        })
+        updateQueueItem(id, { progress: 100 })
+      } else {
+        throw new Error('No file or URL provided')
       }
 
-      const newImage: Image = {
-        id: `img-${Date.now()}`,
-        url: item.previewUrl,
-        title: item.title || item.name,
-        description: item.description,
-        boardId: item.boardId,
-        userId: 'current-user',
-        tags: item.tags,
-        size: item.size,
-        createdAt: new Date().toISOString()
-      }
-
+      const newImage = mapImageResponse(response.image)
       images.value.unshift(newImage)
       updateQueueItem(id, { status: 'success', progress: 100 })
 
       return newImage
-    } catch (e) {
-      updateQueueItem(id, { status: 'error', error: 'Ошибка загрузки' })
+    } catch (e: any) {
+      const errorMsg = e.data?.message || e.message || 'Ошибка загрузки'
+      updateQueueItem(id, { status: 'error', error: errorMsg })
       console.error('Upload error:', e)
       return null
     }
   }
 
-  /**
-   * Загрузка всех pending элементов
-   */
   const uploadAll = async () => {
     const pending = uploadQueue.value.filter(item => item.status === 'pending')
     for (const item of pending) {
@@ -218,35 +262,30 @@ export const useImagesStore = defineStore('images', () => {
     }
   }
 
-  /**
-   * Удаление изображения
-   */
   const deleteImage = async (id: string): Promise<boolean> => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await del(`/images/${id}`)
       images.value = images.value.filter(img => img.id !== id)
       return true
-    } catch (e) {
-      error.value = 'Не удалось удалить изображение'
+    } catch (e: any) {
+      error.value = e.data?.message || 'Не удалось удалить изображение'
       console.error('Error deleting image:', e)
       return false
     }
   }
 
-  /**
-   * Обновление изображения
-   */
   const updateImage = async (id: string, data: UpdateImageDto): Promise<Image | null> => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 300))
+      const response = await put<ImageResponse>(`/images/${id}`, data)
+      const updated = mapImageResponse(response)
+      
       const index = images.value.findIndex(img => img.id === id)
-      if (index === -1) return null
-      const current = images.value[index]
-      if (!current) return null
-      images.value[index] = { ...current, ...data }
-      return images.value[index] ?? null
-    } catch (e) {
-      error.value = 'Не удалось обновить изображение'
+      if (index !== -1) {
+        images.value[index] = updated
+      }
+      return updated
+    } catch (e: any) {
+      error.value = e.data?.message || 'Не удалось обновить изображение'
       console.error('Error updating image:', e)
       return null
     }
@@ -256,24 +295,36 @@ export const useImagesStore = defineStore('images', () => {
     error.value = null
   }
 
-  // Pagination Getters
+  // Pagination
   const paginationState = computed(() => pagination.value)
-  
-  const canLoadMore = computed(() => 
-    pagination.value.hasMore && !pagination.value.isLoading
-  )
+  const canLoadMore = computed(() => pagination.value.hasMore && !pagination.value.isLoading)
 
-  // Pagination Actions
   const fetchPagedImages = async (request: PageRequest): Promise<PaginatedResponse<Image>> => {
     pagination.value.isLoading = true
     pagination.value.error = null
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 800))
-      const response = getMockPagedImages(request)
-      return response
-    } catch (e) {
-      const errorMessage = 'Не удалось загрузить изображения'
+      const params = new URLSearchParams({
+        page: String(request.page),
+        pageSize: String(request.pageSize)
+      })
+      if (request.boardId) params.append('boardId', request.boardId)
+      if (request.query) params.append('query', request.query)
+      if (request.tags?.length) params.append('tags', request.tags.join(','))
+      if (request.sortBy) params.append('sortBy', request.sortBy)
+
+      const response = await get<PaginatedResponse<ImageResponse>>(`/images?${params}`)
+      
+      return {
+        items: response.items.map(mapImageResponse),
+        page: response.page,
+        pageSize: response.pageSize,
+        totalItems: response.totalItems,
+        totalPages: response.totalPages,
+        hasMore: response.hasMore
+      }
+    } catch (e: any) {
+      const errorMessage = e.data?.message || 'Не удалось загрузить изображения'
       pagination.value.error = errorMessage
       throw new Error(errorMessage)
     } finally {
@@ -329,7 +380,6 @@ export const useImagesStore = defineStore('images', () => {
     deleteImage,
     updateImage,
     clearError,
-    // Pagination exports
     pagination,
     paginationState,
     canLoadMore,
@@ -341,81 +391,3 @@ export const useImagesStore = defineStore('images', () => {
     setPaginationError
   }
 })
-
-function getMockImages(boardId: string): Image[] {
-  return [
-    {
-      id: 'img-1',
-      url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600',
-      title: 'Горный пейзаж',
-      description: 'Удивительный вид на горы',
-      boardId,
-      userId: 'current-user',
-      tags: ['природа', 'горы'],
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'img-2',
-      url: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=400&h=300',
-      title: 'Городская архитектура',
-      boardId,
-      userId: 'current-user',
-      tags: ['город', 'архитектура'],
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'img-3',
-      url: 'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=400&h=500',
-      title: 'Лесное озеро',
-      boardId,
-      userId: 'current-user',
-      tags: ['природа', 'озеро'],
-      createdAt: new Date().toISOString()
-    }
-  ]
-}
-
-function getMockPagedImages(request: PageRequest): PaginatedResponse<Image> {
-  const { page, pageSize, boardId } = request
-  const allImages = generateMockImages(boardId || 'default', 50)
-  
-  const startIndex = (page - 1) * pageSize
-  const endIndex = startIndex + pageSize
-  const pageImages = allImages.slice(startIndex, endIndex)
-  
-  return {
-    items: pageImages,
-    page,
-    pageSize,
-    totalItems: allImages.length,
-    totalPages: Math.ceil(allImages.length / pageSize),
-    hasMore: endIndex < allImages.length
-  }
-}
-
-function generateMockImages(boardId: string, count: number): Image[] {
-  const tags = ['природа', 'город', 'архитектура', 'портрет', 'еда', 'путешествия', 'искусство', 'технологии']
-  const titles = ['Горный пейзаж', 'Городская архитектура', 'Лесное озеро', 'Закат на море', 'Ночной город', 'Весенний сад', 'Зимний лес', 'Осенний парк']
-  const images: Image[] = []
-  
-  for (let i = 1; i <= count; i++) {
-    const width = 300 + Math.floor(Math.random() * 200)
-    const height = 300 + Math.floor(Math.random() * 300)
-    
-    images.push({
-      id: `img-${boardId}-${i}`,
-      url: `https://picsum.photos/seed/${boardId}-${i}/${width}/${height}`,
-      title: titles[i % titles.length] || `Изображение ${i}`,
-      description: `Описание изображения ${i}`,
-      boardId,
-      userId: 'current-user',
-      tags: [
-        tags[Math.floor(Math.random() * tags.length)] || 'природа',
-        tags[Math.floor(Math.random() * tags.length)] || 'город'
-      ],
-      createdAt: new Date(Date.now() - i * 86400000).toISOString()
-    })
-  }
-  
-  return images
-}

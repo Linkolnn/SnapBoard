@@ -2,7 +2,7 @@
   <form class="board-form" @submit.prevent="handleSubmit">
     <h2 class="board-form__title">{{ isEditing ? 'Редактировать доску' : 'Создать доску' }}</h2>
     
-    <BaseInput
+    <CommonBaseInput
       v-model="formData.title"
       label="Название"
       placeholder="Введите название доски"
@@ -12,7 +12,7 @@
       required
     />
     
-    <BaseTextarea
+    <CommonBaseTextarea
       v-model="formData.description"
       label="Описание"
       placeholder="Добавьте описание (необязательно)"
@@ -31,12 +31,12 @@
     </div>
     
     <div class="board-form__actions">
-      <BaseButton variant="secondary" :disabled="isSubmitting" @click="handleCancel">
+      <CommonBaseButton variant="secondary" :disabled="isSubmitting" @click="handleCancel">
         Отмена
-      </BaseButton>
-      <BaseButton type="submit" :loading="isSubmitting" :disabled="isSubmitting">
+      </CommonBaseButton>
+      <CommonBaseButton type="submit" :loading="isSubmitting" :disabled="isSubmitting">
         {{ isEditing ? 'Сохранить' : 'Создать' }}
-      </BaseButton>
+      </CommonBaseButton>
     </div>
   </form>
 </template>

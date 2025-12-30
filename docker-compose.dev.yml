@@ -1,0 +1,105 @@
+# docker-compose.dev.yml (корень проекта)
+
+version: '3.8'
+
+services:
+  # ==================== PostgreSQL Database ====================
+  db:
+    image: postgres:15-alpine
+    container_name: snapboard-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: snapboard
+      POSTGRES_PASSWORD: snapboard123
+      POSTGRES_DB: snapboard
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U snapboard -d snapboard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - snapboard-network-dev
+
+  # ==================== NestJS Backend (Development) ====================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: snapboard-backend-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      API_PREFIX: api
+      # Database
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_USER: snapboard
+      DATABASE_PASSWORD: snapboard123
+      DATABASE_NAME: snapboard
+      # JWT
+      JWT_ACCESS_SECRET: dev-access-secret-key
+      JWT_REFRESH_SECRET: dev-refresh-secret-key
+      JWT_ACCESS_EXPIRES_IN: 900
+      JWT_REFRESH_EXPIRES_IN: 604800
+      # CORS
+      CORS_ORIGIN: http://localhost:3000
+      # Upload
+      UPLOAD_DIR: /app/uploads
+      MAX_FILE_SIZE: 10485760
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Монтируем исходный код для hot reload
+      - ./backend/src:/app/src
+      - ./backend/package.json:/app/package.json
+      # Исключаем node_modules (используем из контейнера)
+      - /app/node_modules
+      # Персистентное хранилище для uploads
+      - uploads_data_dev:/app/uploads
+    networks:
+      - snapboard-network-dev
+
+  # ==================== Nuxt Frontend (Development) ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: snapboard-frontend-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      NUXT_PUBLIC_API_BASE: http://localhost:3001/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      # Монтируем исходный код для hot reload
+      - ./frontend:/app
+      # Исключаем node_modules и .nuxt
+      - /app/node_modules
+      - /app/.nuxt
+    networks:
+      - snapboard-network-dev
+
+# ==================== Volumes ====================
+volumes:
+  postgres_data_dev:
+    driver: local
+  uploads_data_dev:
+    driver: local
+
+# ==================== Networks ====================
+networks:
+  snapboard-network-dev:
+    driver: bridge

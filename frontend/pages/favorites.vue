@@ -42,7 +42,6 @@
       :is-open="isFullscreenOpen"
       :image="selectedImage"
       :view-context="viewContext"
-      :all-images="favoriteImages"
       @close="closeFullscreen"
       @next="goToNext"
       @prev="goToPrev"

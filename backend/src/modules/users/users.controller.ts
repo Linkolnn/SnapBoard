@@ -32,6 +32,7 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { BoardsService } from '../boards/boards.service';
+import { ImagesService } from '../images/images.service';
 import {
   UpdateProfileDto,
   ChangePasswordDto,
@@ -53,6 +54,7 @@ export class UsersController {
   constructor(
     private usersService: UsersService,
     private boardsService: BoardsService,
+    private imagesService: ImagesService,
   ) {}
 
   /**
@@ -222,15 +224,7 @@ export class UsersController {
     @Query('page') page?: number,
     @Query('pageSize') pageSize?: number,
   ) {
-    // TODO: Реализовать в ImagesService (Этап 6)
-    return {
-      items: [],
-      page: page || 1,
-      pageSize: pageSize || 12,
-      totalItems: 0,
-      totalPages: 0,
-      hasMore: false,
-    };
+    return this.imagesService.getUserImages(userId, page || 1, pageSize || 12);
   }
 
   // ==================== PRIVATE METHODS ====================

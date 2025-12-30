@@ -1,0 +1,10 @@
+.kiro
+.vscode
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml

@@ -133,6 +133,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Image, ImageViewContext } from '~/types/image'
 import { useFavorites } from '~/composables/useFavorites'
+import { useRecommendations } from '~/composables/useRecommendations'
 import { useAuthActions } from '~/composables/useAuthActions'
 import { useToast } from '~/composables/useToast'
 
@@ -140,7 +141,6 @@ interface Props {
   isOpen: boolean
   image: Image | null
   viewContext: ImageViewContext
-  allImages: Image[]
 }
 
 const props = defineProps<Props>()
@@ -153,12 +153,11 @@ const emit = defineEmits<{
 }>()
 
 const { isFavorite, toggleFavorite } = useFavorites()
+const { recommendations, isLoading: isLoadingRecommendations, loadRecommendations } = useRecommendations()
 const { requireAuth, checkAuth } = useAuthActions()
 const toast = useToast()
 
 const contentRef = ref<HTMLElement | null>(null)
-const isLoadingRecommendations = ref(false)
-const recommendations = ref<Image[]>([])
 const isSaveModalOpen = ref(false)
 const savedBoardIds = ref<string[]>([])
 
@@ -168,65 +167,10 @@ const isFavoriteImage = computed(() => {
   return isFavorite(props.image.id)
 })
 
-/**
- * Получить рекомендации на основе тегов и названия
- */
-const loadRecommendations = () => {
-  if (!props.image) {
-    recommendations.value = []
-    return
-  }
-  
-  isLoadingRecommendations.value = true
-  
-  try {
-    const currentTags = props.image.tags || []
-    const currentTitle = (props.image.title || '').toLowerCase()
-    const titleWords = currentTitle.split(/\s+/).filter(w => w.length > 2)
-    
-    // Фильтруем изображения по совпадению тегов или слов из названия
-    const filtered = props.allImages.filter(img => {
-      if (img.id === props.image!.id) return false
-      
-      const imgTags = img.tags || []
-      const imgTitle = (img.title || '').toLowerCase()
-      
-      const hasMatchingTag = currentTags.some(tag => imgTags.includes(tag))
-      const hasMatchingWord = titleWords.some(word => imgTitle.includes(word))
-      
-      return hasMatchingTag || hasMatchingWord
-    })
-    
-    // Сортируем по количеству совпадений
-    const scored = filtered.map(img => {
-      const imgTags = img.tags || []
-      const imgTitle = (img.title || '').toLowerCase()
-      
-      let score = 0
-      currentTags.forEach(tag => {
-        if (imgTags.includes(tag)) score += 2
-      })
-      titleWords.forEach(word => {
-        if (imgTitle.includes(word)) score += 1
-      })
-      
-      return { img, score }
-    })
-    
-    recommendations.value = scored
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 12)
-      .map(item => item.img)
-      
-  } finally {
-    isLoadingRecommendations.value = false
-  }
-}
-
 // Загружаем рекомендации при смене изображения
-watch(() => props.image?.id, () => {
-  if (props.isOpen && props.image) {
-    loadRecommendations()
+watch(() => props.image?.id, async (newId) => {
+  if (props.isOpen && newId) {
+    await loadRecommendations(newId, 12)
     // Скроллим контент наверх
     if (contentRef.value) {
       contentRef.value.scrollTop = 0
@@ -234,9 +178,9 @@ watch(() => props.image?.id, () => {
   }
 }, { immediate: true })
 
-watch(() => props.isOpen, (isOpen) => {
+watch(() => props.isOpen, async (isOpen) => {
   if (isOpen && props.image) {
-    loadRecommendations()
+    await loadRecommendations(props.image.id, 12)
     document.body.style.overflow = 'hidden'
   } else {
     document.body.style.overflow = ''

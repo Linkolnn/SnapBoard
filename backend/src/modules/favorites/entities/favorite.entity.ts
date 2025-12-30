@@ -12,8 +12,8 @@ import { User } from '../../users/entities/user.entity';
 import { Image } from '../../images/entities/image.entity';
 
 /**
- * Entity избранного
- * Связь многие-ко-многим между пользователями и изображениями
+ * Entity для избранных изображений
+ * Связывает пользователя с изображениями, которые он добавил в избранное
  */
 @Entity('favorites')
 @Unique(['userId', 'imageId']) // Уникальная пара user-image
@@ -26,6 +26,7 @@ export class Favorite {
   userId: string;
 
   @Column({ name: 'image_id' })
+  @Index('idx_favorites_image_id')
   imageId: string;
 
   @CreateDateColumn({ name: 'created_at' })

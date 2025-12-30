@@ -493,7 +493,349 @@ GET    /api/favorites/check   - Проверить статус (batch)
 
 ---
 
-### Этап 9: Безопасность и защита
+### Этап 9: Рекомендательная система (Recommendations)
+**Цель**: API для получения похожих изображений
+
+> **Примечание:** На frontend уже реализована локальная версия рекомендаций в `FullscreenModal.vue`, которая работает на клиенте с уже загруженными изображениями. Backend API позволит получать рекомендации для любого изображения с полным доступом к базе данных.
+
+#### 📱 Текущая реализация на Frontend (локальная)
+
+На фронтенде уже работает локальная система рекомендаций, реализованная в `frontend/components/image/FullscreenModal.vue` (см. `frontend/stage-10.3-fullscreen-view.md`).
+
+**Расположение кода**: `components/image/FullscreenModal.vue` → функция `loadRecommendations()`
+
+**Алгоритм локальной версии**:
+```typescript
+const loadRecommendations = () => {
+  const currentTags = props.image.tags || []
+  const currentTitle = (props.image.title || '').toLowerCase()
+  const titleWords = currentTitle.split(/\s+/).filter(w => w.length > 2)
+  
+  // Фильтруем по совпадению тегов или слов из названия
+  const filtered = props.allImages.filter(img => {
+    if (img.id === props.image.id) return false
+    
+    const imgTags = img.tags || []
+    const imgTitle = (img.title || '').toLowerCase()
+    
+    const hasMatchingTag = currentTags.some(tag => imgTags.includes(tag))
+    const hasMatchingWord = titleWords.some(word => imgTitle.includes(word))
+    
+    return hasMatchingTag || hasMatchingWord
+  })
+  
+  // Scoring: +2 за тег, +1 за слово
+  const scored = filtered.map(img => {
+    let score = 0
+    currentTags.forEach(tag => { if (img.tags?.includes(tag)) score += 2 })
+    titleWords.forEach(word => { if (img.title?.toLowerCase().includes(word)) score += 1 })
+    return { img, score }
+  })
+  
+  // Топ-12 по score
+  recommendations.value = scored.sort((a, b) => b.score - a.score).slice(0, 12).map(item => item.img)
+}
+```
+
+**Ограничения локальной версии**:
+- Работает только с изображениями, уже загруженными на клиент (`props.allImages`)
+- Не имеет доступа ко всей базе данных
+- Нет кэширования
+- Нет персонализации
+
+**Решение при интеграции с Backend API**:
+1. **Оставить локальную версию как fallback** — если API недоступен или для быстрого отображения
+2. **Заменить на API вызов** — для полноценных рекомендаций из всей БД
+3. **Гибридный подход** — сначала показать локальные, затем обновить из API
+
+**Рекомендуемый подход**: Заменить локальную логику на API вызов после реализации backend endpoint, сохранив локальную версию как fallback для offline-режима или при ошибках API.
+
+#### 🔄 Стратегия миграции Frontend → Backend API
+
+**Что делать с локальным кодом после реализации Backend API:**
+
+| Сценарий | Действие | Причина |
+|----------|----------|---------|
+| Backend API готов и стабилен | Заменить `loadRecommendations()` на API вызов | Полный доступ к БД, лучший scoring |
+| Нужен быстрый отклик UI | Гибридный подход: сначала локальные, потом API | UX: мгновенный результат + обновление |
+| Offline-режим важен | Оставить локальную версию как fallback | Работа без сети |
+| Удалить полностью | Только если 100% уверены в стабильности API | Упрощение кода |
+
+**Файлы для изменения при миграции:**
+- `frontend/components/image/FullscreenModal.vue` — заменить `loadRecommendations()` на API вызов
+- Создать `frontend/composables/useRecommendations.ts` — новый composable для API
+- Опционально: оставить локальную логику в отдельной функции `getLocalRecommendations()` как fallback
+
+**Пример гибридного подхода:**
+```typescript
+const loadRecommendations = async () => {
+  // 1. Сначала показываем локальные (мгновенно)
+  recommendations.value = getLocalRecommendations(props.image, props.allImages)
+  
+  // 2. Затем загружаем из API (асинхронно)
+  try {
+    const { data } = await useFetch(`/api/images/${props.image.id}/recommendations`)
+    if (data.value?.items) {
+      recommendations.value = data.value.items
+    }
+  } catch (error) {
+    // Fallback: оставляем локальные рекомендации
+    console.warn('API recommendations failed, using local fallback')
+  }
+}
+```
+
+**Задачи**:
+- [ ] Создание Recommendations модуля (или расширение ImagesService)
+- [ ] Endpoint для получения похожих изображений
+- [ ] Алгоритм ранжирования по тегам
+- [ ] Алгоритм ранжирования по словам из названия
+- [ ] Комбинированный scoring
+- [ ] Исключение текущего изображения из результатов
+- [ ] Пагинация рекомендаций
+- [ ] Кэширование популярных рекомендаций (опционально)
+
+**API Endpoints**:
+```
+GET    /api/images/:id/recommendations - Получить похожие изображения
+```
+
+**Query параметры**:
+```typescript
+interface RecommendationsQueryParams {
+  limit?: number;       // default: 12, max: 50
+  excludeUserId?: string; // исключить изображения пользователя (опционально)
+}
+```
+
+**Алгоритм ранжирования**:
+```typescript
+/**
+ * Scoring система для рекомендаций:
+ * 
+ * 1. Совпадение тегов: +2 балла за каждый совпадающий тег
+ * 2. Совпадение слов в названии: +1 балл за каждое совпадающее слово (>2 символов)
+ * 3. Сортировка по убыванию score
+ * 4. При равном score — по дате создания (новые первые)
+ */
+
+interface ScoredImage {
+  image: Image;
+  score: number;
+  matchedTags: string[];
+  matchedWords: string[];
+}
+
+// Пример SQL запроса с использованием PostgreSQL массивов
+const query = `
+  SELECT 
+    i.*,
+    (
+      -- Подсчёт совпадающих тегов
+      COALESCE(array_length(
+        ARRAY(SELECT unnest(i.tags) INTERSECT SELECT unnest($1::text[])), 
+        1
+      ), 0) * 2 +
+      -- Подсчёт совпадающих слов в названии (упрощённо)
+      CASE WHEN LOWER(i.title) LIKE ANY($2::text[]) THEN 1 ELSE 0 END
+    ) as score
+  FROM images i
+  WHERE i.id != $3
+    AND (
+      i.tags && $1::text[]  -- Пересечение массивов тегов
+      OR LOWER(i.title) LIKE ANY($2::text[])
+    )
+  ORDER BY score DESC, i.created_at DESC
+  LIMIT $4
+`;
+```
+
+**Response (200)**:
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "url": "/uploads/images/image.jpg",
+      "title": "Similar Image",
+      "tags": ["nature", "sunset"],
+      "width": 1920,
+      "height": 1080,
+      "score": 5,
+      "matchedTags": ["nature", "sunset"],
+      "user": {
+        "id": "uuid",
+        "username": "johndoe",
+        "avatar": "/uploads/avatars/avatar.jpg"
+      },
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "sourceImage": {
+    "id": "uuid",
+    "title": "Original Image",
+    "tags": ["nature", "sunset", "ocean"]
+  },
+  "totalMatches": 25
+}
+```
+
+**Реализация в ImagesService**:
+```typescript
+/**
+ * Получение рекомендаций для изображения
+ */
+async getRecommendations(
+  imageId: string,
+  limit: number = 12,
+  currentUserId?: string,
+): Promise<{
+  items: any[];
+  sourceImage: { id: string; title: string; tags: string[] };
+  totalMatches: number;
+}> {
+  // 1. Получаем исходное изображение
+  const sourceImage = await this.imagesRepository.findOne({
+    where: { id: imageId },
+  });
+
+  if (!sourceImage) {
+    throw new NotFoundException('Изображение не найдено');
+  }
+
+  const sourceTags = sourceImage.tags || [];
+  const sourceTitle = (sourceImage.title || '').toLowerCase();
+  const titleWords = sourceTitle
+    .split(/\s+/)
+    .filter(w => w.length > 2)
+    .map(w => `%${w}%`);
+
+  // 2. Строим запрос для поиска похожих
+  const queryBuilder = this.imagesRepository
+    .createQueryBuilder('image')
+    .leftJoinAndSelect('image.user', 'user')
+    .where('image.id != :imageId', { imageId });
+
+  // Фильтр по тегам ИЛИ словам из названия
+  if (sourceTags.length > 0 || titleWords.length > 0) {
+    const conditions: string[] = [];
+    
+    if (sourceTags.length > 0) {
+      conditions.push('image.tags && :tags');
+    }
+    
+    if (titleWords.length > 0) {
+      titleWords.forEach((_, index) => {
+        conditions.push(`LOWER(image.title) LIKE :word${index}`);
+      });
+    }
+    
+    queryBuilder.andWhere(`(${conditions.join(' OR ')})`);
+    
+    if (sourceTags.length > 0) {
+      queryBuilder.setParameter('tags', sourceTags);
+    }
+    
+    titleWords.forEach((word, index) => {
+      queryBuilder.setParameter(`word${index}`, word);
+    });
+  }
+
+  // 3. Получаем все подходящие изображения
+  const candidates = await queryBuilder.getMany();
+
+  // 4. Рассчитываем score для каждого
+  const scored = candidates.map(img => {
+    const imgTags = img.tags || [];
+    const imgTitle = (img.title || '').toLowerCase();
+    
+    let score = 0;
+    const matchedTags: string[] = [];
+    
+    // +2 за каждый совпадающий тег
+    sourceTags.forEach(tag => {
+      if (imgTags.includes(tag)) {
+        score += 2;
+        matchedTags.push(tag);
+      }
+    });
+    
+    // +1 за каждое совпадающее слово
+    const sourceWords = sourceTitle.split(/\s+/).filter(w => w.length > 2);
+    sourceWords.forEach(word => {
+      if (imgTitle.includes(word)) {
+        score += 1;
+      }
+    });
+    
+    return { image: img, score, matchedTags };
+  });
+
+  // 5. Сортируем и ограничиваем
+  const sorted = scored
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return new Date(b.image.createdAt).getTime() - new Date(a.image.createdAt).getTime();
+    })
+    .slice(0, limit);
+
+  // 6. Форматируем ответ
+  const items = await Promise.all(
+    sorted.map(async ({ image, score, matchedTags }) => ({
+      ...await this.formatImage(image, currentUserId),
+      score,
+      matchedTags,
+    }))
+  );
+
+  return {
+    items,
+    sourceImage: {
+      id: sourceImage.id,
+      title: sourceImage.title,
+      tags: sourceImage.tags || [],
+    },
+    totalMatches: candidates.length,
+  };
+}
+```
+
+**Интеграция с Frontend**:
+
+После реализации backend API, frontend может заменить локальную логику на API вызов:
+
+```typescript
+// frontend/composables/useRecommendations.ts
+export const useRecommendations = () => {
+  const recommendations = ref<Image[]>([])
+  const isLoading = ref(false)
+  
+  const loadRecommendations = async (imageId: string) => {
+    isLoading.value = true
+    try {
+      const { data } = await useFetch(`/api/images/${imageId}/recommendations`, {
+        query: { limit: 12 }
+      })
+      recommendations.value = data.value?.items || []
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  return { recommendations, isLoading, loadRecommendations }
+}
+```
+
+**Преимущества Backend API над локальной реализацией**:
+1. Доступ ко всей базе изображений (не только загруженным на клиент)
+2. Более точный scoring с использованием SQL
+3. Возможность кэширования на сервере
+4. Персонализация (учёт избранного пользователя)
+5. Масштабируемость
+
+---
+
+### Этап 10: Безопасность и защита
 **Цель**: Настройка защиты API
 
 **Задачи**:
@@ -529,7 +871,7 @@ app.use('/api/upload', rateLimit({
 
 ---
 
-### Этап 10: Docker и деплой (Full Stack)
+### Этап 11: Docker и деплой (Full Stack)
 **Цель**: Контейнеризация всего проекта (Frontend + Backend + PostgreSQL)
 
 **Задачи**:
@@ -783,7 +1125,7 @@ docker-compose down
 
 ---
 
-### Этап 11: Тестирование
+### Этап 12: Тестирование
 **Цель**: Покрытие кода тестами
 
 **Задачи**:
@@ -796,7 +1138,7 @@ docker-compose down
 
 ---
 
-### Этап 12: Документация API
+### Этап 13: Документация API
 **Цель**: Swagger документация
 
 **Задачи**:
@@ -850,6 +1192,7 @@ docker-compose down
 | GET | /api/images/:id | Получить изображение | ❌ |
 | PUT | /api/images/:id | Обновить метаданные | ✅ |
 | DELETE | /api/images/:id | Удалить изображение | ✅ |
+| GET | /api/images/:id/recommendations | Похожие изображения | ❌ |
 
 ### Upload
 | Method | Endpoint | Description | Auth |
@@ -937,9 +1280,10 @@ NUXT_PUBLIC_API_BASE=http://localhost:3001/api
 3. **Этап 5-6**: Boards и Images (3-4 дня)
 4. **Этап 7**: Upload (2 дня)
 5. **Этап 8**: Favorites (1 день)
-6. **Этап 9**: Безопасность (1-2 дня)
-7. **Этап 10**: Docker (1 день)
-8. **Этап 11-12**: Тесты и документация (2-3 дня)
+6. **Этап 9**: Recommendations - рекомендации по тегам (1-2 дня)
+7. **Этап 10**: Безопасность (1-2 дня)
+8. **Этап 11**: Docker Full Stack (1 день)
+9. **Этап 12-13**: Тесты и документация (2-3 дня)
 
 **Общая оценка**: 2-3 недели
 

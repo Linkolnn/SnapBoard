@@ -48,7 +48,6 @@
       :is-open="isModalOpen"
       :image="selectedImage"
       :view-context="viewContext"
-      :all-images="displayedImages"
       @close="closeModal"
       @next="nextImage"
       @prev="prevImage"

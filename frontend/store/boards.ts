@@ -2,22 +2,79 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Board, CreateBoardDto, UpdateBoardDto } from '~/types/board'
 
+interface PaginatedResponse<T> {
+  items: T[]
+  page: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+  hasMore: boolean
+}
+
+interface BoardResponse {
+  id: string
+  title: string
+  description?: string
+  coverImage?: string
+  isPrivate: boolean
+  imagesCount: number
+  user?: {
+    id: string
+    username: string
+    avatar?: string
+  }
+  createdAt: string
+  updatedAt: string
+}
+
 export const useBoardsStore = defineStore('boards', () => {
   const boards = ref<Board[]>([])
   const currentBoard = ref<Board | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const pagination = ref({
+    page: 1,
+    pageSize: 12,
+    totalItems: 0,
+    totalPages: 0,
+    hasMore: false
+  })
 
-  const totalBoards = computed(() => boards.value.length)
+  const totalBoards = computed(() => pagination.value.totalItems || boards.value.length)
 
-  const fetchBoards = async () => {
+  const { get, post, put, del } = useApi()
+
+  // Преобразование ответа API в формат Board
+  const mapBoardResponse = (data: BoardResponse): Board => ({
+    id: data.id,
+    title: data.title,
+    description: data.description,
+    coverImage: data.coverImage,
+    isPrivate: data.isPrivate,
+    imageCount: data.imagesCount,
+    userId: data.user?.id || '',
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt
+  })
+
+  const fetchBoards = async (page = 1, pageSize = 12) => {
     isLoading.value = true
     error.value = null
     try {
-      await new Promise(resolve => setTimeout(resolve, 500))
-      boards.value = getMockBoards()
-    } catch (e) {
-      error.value = 'Не удалось загрузить доски'
+      const response = await get<PaginatedResponse<BoardResponse>>(
+        `/boards?page=${page}&pageSize=${pageSize}`
+      )
+      boards.value = response.items.map(mapBoardResponse)
+      pagination.value = {
+        page: response.page,
+        pageSize: response.pageSize,
+        totalItems: response.totalItems,
+        totalPages: response.totalPages,
+        hasMore: response.hasMore
+      }
+    } catch (e: any) {
+      error.value = e.data?.message || 'Не удалось загрузить доски'
+      console.error('Error fetching boards:', e)
     } finally {
       isLoading.value = false
     }
@@ -27,17 +84,12 @@ export const useBoardsStore = defineStore('boards', () => {
     isLoading.value = true
     error.value = null
     try {
-      await new Promise(resolve => setTimeout(resolve, 300))
-      let board = boards.value.find(b => b.id === id)
-      if (!board) {
-        const mockBoard = getMockBoards().find(b => b.id === id)
-        if (mockBoard) board = mockBoard
-      }
-      if (!board) throw new Error('Доска не найдена')
-      currentBoard.value = board
-      return board
-    } catch (e) {
-      error.value = 'Не удалось загрузить доску'
+      const response = await get<BoardResponse>(`/boards/${id}`)
+      currentBoard.value = mapBoardResponse(response)
+      return currentBoard.value
+    } catch (e: any) {
+      error.value = e.data?.message || 'Не удалось загрузить доску'
+      console.error('Error fetching board:', e)
       return null
     } finally {
       isLoading.value = false
@@ -48,21 +100,13 @@ export const useBoardsStore = defineStore('boards', () => {
     isLoading.value = true
     error.value = null
     try {
-      await new Promise(resolve => setTimeout(resolve, 300))
-      const newBoard: Board = {
-        id: `board-${Date.now()}`,
-        title: data.title,
-        description: data.description,
-        userId: 'current-user',
-        isPrivate: data.isPrivate ?? false,
-        imageCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
+      const response = await post<BoardResponse>('/boards', data)
+      const newBoard = mapBoardResponse(response)
       boards.value.unshift(newBoard)
       return newBoard
-    } catch (e) {
-      error.value = 'Не удалось создать доску'
+    } catch (e: any) {
+      error.value = e.data?.message || 'Не удалось создать доску'
+      console.error('Error creating board:', e)
       return null
     } finally {
       isLoading.value = false
@@ -73,32 +117,21 @@ export const useBoardsStore = defineStore('boards', () => {
     isLoading.value = true
     error.value = null
     try {
-      await new Promise(resolve => setTimeout(resolve, 300))
+      const response = await put<BoardResponse>(`/boards/${id}`, data)
+      const updated = mapBoardResponse(response)
+      
       const index = boards.value.findIndex(b => b.id === id)
-      if (index === -1) throw new Error('Доска не найдена')
-      
-      const existing = boards.value[index]
-      if (!existing) throw new Error('Доска не найдена')
-      
-      const updated: Board = {
-        id: existing.id,
-        userId: existing.userId,
-        coverImage: existing.coverImage,
-        imageCount: existing.imageCount,
-        createdAt: existing.createdAt,
-        title: data.title ?? existing.title,
-        description: data.description ?? existing.description,
-        isPrivate: data.isPrivate ?? existing.isPrivate,
-        updatedAt: new Date().toISOString()
+      if (index !== -1) {
+        boards.value[index] = updated
       }
-      boards.value[index] = updated
       
       if (currentBoard.value?.id === id) {
         currentBoard.value = updated
       }
       return updated
-    } catch (e) {
-      error.value = 'Не удалось обновить доску'
+    } catch (e: any) {
+      error.value = e.data?.message || 'Не удалось обновить доску'
+      console.error('Error updating board:', e)
       return null
     } finally {
       isLoading.value = false
@@ -109,17 +142,42 @@ export const useBoardsStore = defineStore('boards', () => {
     isLoading.value = true
     error.value = null
     try {
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await del(`/boards/${id}`)
       boards.value = boards.value.filter(b => b.id !== id)
       if (currentBoard.value?.id === id) {
         currentBoard.value = null
       }
       return true
-    } catch (e) {
-      error.value = 'Не удалось удалить доску'
+    } catch (e: any) {
+      error.value = e.data?.message || 'Не удалось удалить доску'
+      console.error('Error deleting board:', e)
       return false
     } finally {
       isLoading.value = false
+    }
+  }
+
+  // Сохранение изображения на доску
+  const addImageToBoard = async (boardId: string, imageId: string): Promise<boolean> => {
+    try {
+      await post(`/boards/${boardId}/images`, { imageId })
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || 'Не удалось сохранить изображение'
+      console.error('Error adding image to board:', e)
+      return false
+    }
+  }
+
+  // Удаление изображения с доски
+  const removeImageFromBoard = async (boardId: string, imageId: string): Promise<boolean> => {
+    try {
+      await del(`/boards/${boardId}/images`, { imageId })
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || 'Не удалось удалить изображение'
+      console.error('Error removing image from board:', e)
+      return false
     }
   }
 
@@ -132,59 +190,15 @@ export const useBoardsStore = defineStore('boards', () => {
     currentBoard,
     isLoading,
     error,
+    pagination,
     totalBoards,
     fetchBoards,
     fetchBoard,
     createBoard,
     updateBoard,
     deleteBoard,
+    addImageToBoard,
+    removeImageFromBoard,
     clearCurrentBoard
   }
 })
-
-function getMockBoards(): Board[] {
-  return [
-    {
-      id: 'board-1',
-      title: 'Вдохновение',
-      description: 'Коллекция вдохновляющих изображений',
-      userId: 'user-1',
-      coverImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300',
-      isPrivate: false,
-      imageCount: 24,
-      createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-12-20T15:30:00Z'
-    },
-    {
-      id: 'board-2',
-      title: 'Дизайн интерьера',
-      description: 'Идеи для ремонта квартиры',
-      userId: 'user-1',
-      coverImage: 'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=400&h=300',
-      isPrivate: true,
-      imageCount: 18,
-      createdAt: '2024-02-10T12:00:00Z',
-      updatedAt: '2024-12-18T09:15:00Z'
-    },
-    {
-      id: 'board-3',
-      title: 'Путешествия',
-      description: 'Места, которые хочу посетить',
-      userId: 'user-1',
-      coverImage: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=400&h=300',
-      isPrivate: false,
-      imageCount: 42,
-      createdAt: '2024-03-05T08:00:00Z',
-      updatedAt: '2024-12-25T11:45:00Z'
-    },
-    {
-      id: 'board-4',
-      title: 'Рецепты',
-      userId: 'user-1',
-      isPrivate: false,
-      imageCount: 15,
-      createdAt: '2024-04-20T14:00:00Z',
-      updatedAt: '2024-12-22T16:20:00Z'
-    }
-  ]
-}

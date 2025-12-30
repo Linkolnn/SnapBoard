@@ -5,6 +5,7 @@ import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { BoardsModule } from '../boards/boards.module';
+import { ImagesModule } from '../images/images.module';
 
 /**
  * Модуль пользователей
@@ -16,6 +17,7 @@ import { BoardsModule } from '../boards/boards.module';
       dest: './uploads/avatars',
     }),
     forwardRef(() => BoardsModule),
+    forwardRef(() => ImagesModule),
   ],
   controllers: [UsersController],
   providers: [UsersService],

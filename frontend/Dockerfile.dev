@@ -1,0 +1,22 @@
+# frontend/Dockerfile.dev
+
+FROM node:20-alpine
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем package files
+COPY package*.json ./
+COPY yarn.lock ./
+
+# Устанавливаем зависимости
+RUN yarn install
+
+# Копируем исходный код (будет перезаписан volume в dev режиме)
+COPY . .
+
+# Открываем порт
+EXPOSE 3000
+
+# Запускаем в режиме разработки
+CMD ["yarn", "dev"]

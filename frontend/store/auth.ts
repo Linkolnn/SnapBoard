@@ -2,37 +2,32 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User } from '~/types'
 
+interface AuthResponse {
+  user: User
+  accessToken?: string
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  // Cookie для проверки авторизации (httpOnly: false)
-  const accessTokenCookie = useCookie('access_token', {
-    maxAge: 60 * 15,
-    sameSite: 'lax',
-    path: '/'
-  })
+  const isAuthenticated = computed(() => !!user.value)
 
-  const isAuthenticated = computed(() => {
-    return !!accessTokenCookie.value
-  })
+  const { post, get } = useApi()
 
   const login = async (email: string, password: string) => {
     isLoading.value = true
     error.value = null
 
     try {
-      const response = await $fetch('/api/auth/login', {
-        method: 'POST',
-        body: { email, password }
-      })
-
+      const response = await post<AuthResponse>('/auth/login', { email, password })
       user.value = response.user
       return { success: true }
     } catch (err: any) {
       console.error('Login error:', err)
-      error.value = err.data?.message || err.message || 'Ошибка при входе'
+      const message = err.data?.message || err.message || 'Ошибка при входе'
+      error.value = Array.isArray(message) ? message[0] : message
       return { success: false, error: error.value }
     } finally {
       isLoading.value = false
@@ -44,16 +39,13 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
-      const response = await $fetch('/api/auth/register', {
-        method: 'POST',
-        body: { username, email, password }
-      })
-
+      const response = await post<AuthResponse>('/auth/register', { username, email, password })
       user.value = response.user
       return { success: true }
     } catch (err: any) {
       console.error('Register error:', err)
-      error.value = err.data?.message || err.message || 'Ошибка при регистрации'
+      const message = err.data?.message || err.message || 'Ошибка при регистрации'
+      error.value = Array.isArray(message) ? message[0] : message
       return { success: false, error: error.value }
     } finally {
       isLoading.value = false
@@ -62,32 +54,28 @@ export const useAuthStore = defineStore('auth', () => {
 
   const logout = async () => {
     try {
-      await $fetch('/api/auth/logout', { method: 'POST' })
+      await post('/auth/logout', {})
     } catch (err) {
       console.error('Logout error:', err)
     } finally {
       user.value = null
       error.value = null
-      accessTokenCookie.value = null
     }
   }
 
   const fetchCurrentUser = async () => {
-    if (!accessTokenCookie.value) return
-
     try {
-      const response = await $fetch('/api/auth/me')
-      user.value = response.user
+      const response = await get<User>('/auth/me')
+      user.value = response
     } catch (err) {
-      console.error('Failed to fetch current user:', err)
+      // Пользователь не авторизован - это нормально
       user.value = null
-      accessTokenCookie.value = null
     }
   }
 
   const refreshAccessToken = async () => {
     try {
-      await $fetch('/api/auth/refresh', { method: 'POST' })
+      await post('/auth/refresh', {})
       return true
     } catch (err) {
       console.error('Token refresh failed:', err)
