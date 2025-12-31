@@ -89,6 +89,7 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useAuthStore } from '~/store/auth'
 import { 
   useFormValidation, 
@@ -103,6 +104,13 @@ import {
  * Store аутентификации
  */
 const authStore = useAuthStore()
+
+/**
+ * Очищаем ошибку при монтировании компонента
+ */
+onMounted(() => {
+  authStore.clearError()
+})
 
 /**
  * Router для навигации после успешной регистрации

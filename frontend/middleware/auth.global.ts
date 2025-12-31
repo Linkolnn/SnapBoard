@@ -1,29 +1,22 @@
 /**
  * Глобальный middleware для проверки аутентификации
- * Работает на клиенте
+ * Проверяет наличие access_token и user_data cookies
+ * НЕ делает никаких API запросов!
  */
-import { useAuthStore } from '~/store/auth'
 
-export default defineNuxtRouteMiddleware(async (to) => {
+export default defineNuxtRouteMiddleware((to) => {
   // Список защищённых роутов
   const protectedRoutes = ['/profile', '/boards', '/settings', '/favorites']
 
   // Список роутов только для гостей
   const guestRoutes = ['/login', '/register']
 
-  // Проверяем авторизацию через store
-  const authStore = useAuthStore()
+  // Проверяем наличие cookies
+  const accessToken = useCookie('access_token')
+  const userData = useCookie('user_data')
   
-  // Если user не загружен, пробуем получить через API
-  if (!authStore.user) {
-    try {
-      await authStore.fetchCurrentUser()
-    } catch {
-      // Игнорируем ошибку - пользователь не авторизован
-    }
-  }
-
-  const isAuthenticated = !!authStore.user
+  // Авторизован только если есть И токен И данные пользователя
+  const isAuthenticated = !!accessToken.value && !!userData.value
 
   // Если защищённый роут и не авторизован - на login
   if (protectedRoutes.some(route => to.path.startsWith(route)) && !isAuthenticated) {

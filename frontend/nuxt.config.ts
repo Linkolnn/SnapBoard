@@ -14,16 +14,13 @@ export default defineNuxtConfig({
 
   security: {
     headers: {
-      crossOriginEmbedderPolicy: process.env.NODE_ENV === 'development' ? 'unsafe-none' : 'require-corp',
+      crossOriginEmbedderPolicy: 'unsafe-none',
       contentSecurityPolicy: {
         'img-src': ["'self'", 'data:', 'https:', 'http://localhost:3001'],
         'script-src': ["'self'", "'unsafe-inline'"],
       }
     },
-    rateLimiter: {
-      tokensPerInterval: 150,
-      interval: 60000,
-    }
+    rateLimiter: false
   },
 
   // Pinia конфигурация

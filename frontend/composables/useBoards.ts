@@ -1,13 +1,17 @@
 import { storeToRefs } from 'pinia'
 import { useBoardsStore } from '~/store/boards'
+import { useAuthStore } from '~/store/auth'
 import type { CreateBoardDto, UpdateBoardDto } from '~/types/board'
 
 export function useBoards() {
   const store = useBoardsStore()
+  const authStore = useAuthStore()
   const { boards, currentBoard, isLoading, error, totalBoards } = storeToRefs(store)
 
+  // Загрузка досок текущего пользователя
   const loadBoards = async () => {
-    await store.fetchBoards()
+    const userId = authStore.user?.id
+    await store.fetchBoards(1, 12, userId)
   }
 
   const loadBoard = async (id: string) => {
@@ -30,6 +34,10 @@ export function useBoards() {
     store.clearCurrentBoard()
   }
 
+  const clearBoards = () => {
+    store.clearBoards()
+  }
+
   return {
     boards,
     currentBoard,
@@ -41,6 +49,7 @@ export function useBoards() {
     createBoard,
     updateBoard,
     deleteBoard,
-    clearCurrentBoard
+    clearCurrentBoard,
+    clearBoards
   }
 }

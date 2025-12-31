@@ -73,6 +73,43 @@ export class UsersService {
     return bcrypt.compare(password, user.passwordHash);
   }
 
+  // ==================== PASSWORD RESET METHODS ====================
+
+  /**
+   * Установка токена сброса пароля
+   */
+  async setResetToken(userId: string, token: string, expires: Date): Promise<void> {
+    await this.usersRepository.update(userId, {
+      resetToken: token,
+      resetTokenExpires: expires,
+    });
+  }
+
+  /**
+   * Поиск пользователя по токену сброса
+   */
+  async findByResetToken(token: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { resetToken: token } });
+  }
+
+  /**
+   * Очистка токена сброса пароля
+   */
+  async clearResetToken(userId: string): Promise<void> {
+    await this.usersRepository.update(userId, {
+      resetToken: null,
+      resetTokenExpires: null,
+    });
+  }
+
+  /**
+   * Обновление пароля (без проверки текущего)
+   */
+  async updatePassword(userId: string, newPassword: string): Promise<void> {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.usersRepository.update(userId, { passwordHash: hashedPassword });
+  }
+
   // ==================== PROFILE METHODS ====================
 
   /**

@@ -43,6 +43,14 @@ export class User {
   @Exclude() // Исключаем из ответов API
   refreshToken: string | null;
 
+  @Column({ name: 'reset_token', type: 'varchar', length: 255, nullable: true })
+  @Exclude() // Исключаем из ответов API
+  resetToken: string | null;
+
+  @Column({ name: 'reset_token_expires', type: 'timestamp', nullable: true })
+  @Exclude() // Исключаем из ответов API
+  resetTokenExpires: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

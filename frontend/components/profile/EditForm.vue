@@ -115,7 +115,7 @@ const handleSubmit = () => {
   &__title
     font-size: 20px
     font-weight: 600
-    color: $text-light
+    color: var(--text-primary)
     margin-bottom: 8px
   
   &__actions

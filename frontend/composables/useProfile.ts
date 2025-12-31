@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '~/store/auth'
-import { useFavorites } from '~/composables/useFavorites'
+import { useApi } from '~/composables/useApi'
 import type { UserStats, UpdateProfileDto, ChangePasswordDto } from '~/types/user'
 import type { Board } from '~/types/board'
 import type { Image } from '~/types/image'
@@ -22,7 +22,6 @@ interface PaginatedResponse<T> {
 
 export const useProfile = () => {
   const authStore = useAuthStore()
-  const { favoritesCount: localFavoritesCount } = useFavorites()
   const { get, put, del, upload } = useApi()
   
   // State
@@ -40,7 +39,7 @@ export const useProfile = () => {
   const stats = computed<UserStats>(() => ({
     boardsCount: serverStats.value?.boardsCount ?? userBoards.value.length,
     imagesCount: serverStats.value?.imagesCount ?? userImages.value.length,
-    favoritesCount: serverStats.value?.favoritesCount ?? localFavoritesCount.value,
+    favoritesCount: serverStats.value?.favoritesCount ?? 0,
     joinedAt: user.value?.createdAt || new Date().toISOString()
   }))
 

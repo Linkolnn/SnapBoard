@@ -14,6 +14,7 @@ import { ImagesModule } from './modules/images/images.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { HealthModule } from './modules/health/health.module';
+import { MailerModule } from './modules/mailer/mailer.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -37,6 +38,9 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
     }),
+    
+    // Global modules
+    MailerModule,
     
     // Feature modules
     AuthModule,

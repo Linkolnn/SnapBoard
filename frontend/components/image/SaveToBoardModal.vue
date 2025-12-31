@@ -192,10 +192,8 @@ const handleClose = () => {
 const handleSelectBoard = (board: Board) => {
   if (isSavedToBoard(board.id)) {
     emit('remove', board.id)
-    toast.info(`Удалено с доски "${board.title}"`)
   } else {
     emit('save', board.id)
-    toast.success(`Сохранено на доску "${board.title}"`)
   }
 }
 

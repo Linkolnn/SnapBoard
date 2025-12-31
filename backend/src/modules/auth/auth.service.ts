@@ -1,8 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
+import * as crypto from 'crypto';
 import { UsersService } from '../users/users.service';
+import { MailerService } from '../mailer/mailer.service';
 import { RegisterDto, LoginDto } from './dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { User } from '../users/entities/user.entity';
@@ -12,10 +14,13 @@ import { User } from '../users/entities/user.entity';
  */
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailerService: MailerService,
   ) {}
 
   /**
@@ -111,6 +116,88 @@ export class AuthService {
     return this.sanitizeUser(user);
   }
 
+  /**
+   * Запрос сброса пароля
+   */
+  async forgotPassword(email: string): Promise<{ message: string; token?: string }> {
+    const user = await this.usersService.findByEmail(email);
+
+    // Всегда возвращаем успех (защита от перебора email)
+    if (!user) {
+      return { message: 'Если email существует, инструкции отправлены' };
+    }
+
+    // Генерация криптографически безопасного токена
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpires = new Date(Date.now() + 3600000); // 1 час
+
+    await this.usersService.setResetToken(user.id, resetToken, resetTokenExpires);
+
+    // Отправка email
+    const emailSent = await this.mailerService.sendPasswordResetEmail(email, resetToken);
+
+    if (emailSent) {
+      this.logger.log(`Password reset email sent to: ${email}`);
+      return { message: 'Инструкции по восстановлению пароля отправлены на email' };
+    }
+
+    // В development режиме возвращаем токен если email не отправлен
+    const nodeEnv = this.configService.get<string>('nodeEnv');
+    if (nodeEnv === 'development' || nodeEnv !== 'production') {
+      this.logger.warn(`Email not sent (SMTP not configured). Token for ${email}: ${resetToken}`);
+      return {
+        message: 'Токен сброса создан (SMTP не настроен, токен в ответе)',
+        token: resetToken,
+      };
+    }
+
+    return { message: 'Если email существует, инструкции отправлены' };
+  }
+
+  /**
+   * Проверка токена сброса пароля
+   */
+  async verifyResetToken(token: string): Promise<{ valid: boolean }> {
+    if (!token) {
+      return { valid: false };
+    }
+
+    const user = await this.usersService.findByResetToken(token);
+
+    if (!user) {
+      return { valid: false };
+    }
+
+    if (!user.resetTokenExpires || user.resetTokenExpires < new Date()) {
+      return { valid: false };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * Сброс пароля по токену
+   */
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const user = await this.usersService.findByResetToken(token);
+
+    if (!user) {
+      throw new BadRequestException('Недействительный токен сброса пароля');
+    }
+
+    if (!user.resetTokenExpires || user.resetTokenExpires < new Date()) {
+      // Очищаем истёкший токен
+      await this.usersService.clearResetToken(user.id);
+      throw new BadRequestException('Токен сброса пароля истёк');
+    }
+
+    // Обновляем пароль и очищаем токен
+    await this.usersService.updatePassword(user.id, newPassword);
+    await this.usersService.clearResetToken(user.id);
+
+    return { message: 'Пароль успешно изменён' };
+  }
+
   // ==================== PRIVATE METHODS ====================
 
   /**
@@ -138,14 +225,13 @@ export class AuthService {
   }
 
   /**
-   * Установка токенов в httpOnly cookies
+   * Установка токенов в cookies
    */
   private setTokenCookies(
     res: Response,
     tokens: { accessToken: string; refreshToken: string },
   ) {
     res.cookie('access_token', tokens.accessToken, {
-      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000, // 15 минут
@@ -153,7 +239,6 @@ export class AuthService {
     });
 
     res.cookie('refresh_token', tokens.refreshToken, {
-      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 дней

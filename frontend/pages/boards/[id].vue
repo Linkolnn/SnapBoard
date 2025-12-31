@@ -41,6 +41,7 @@
         <!-- Панель поиска -->
         <SearchPanel 
           :board-id="boardId" 
+          :images="infiniteImages"
           class="board-page__search"
         />
 
@@ -126,15 +127,17 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useBoards } from '~/composables/useBoards'
 import { useInfiniteScroll } from '~/composables/useInfiniteScroll'
 import { useSearch } from '~/composables/useSearch'
+import { useImagesStore } from '~/store/images'
 import type { Image, ImageViewContext } from '~/types/image'
 import type { UpdateBoardDto } from '~/types/board'
 
 const route = useRoute()
 const { currentBoard, isLoading: boardLoading, error: boardError, loadBoard, updateBoard, clearCurrentBoard } = useBoards()
+const imagesStore = useImagesStore()
 
 const boardId = computed(() => route.params.id as string)
 
-// Infinite Scroll
+// Infinite Scroll - передаём реактивный boardId
 const {
   items: infiniteImages,
   isLoading: infiniteLoading,
@@ -145,7 +148,7 @@ const {
   retry,
   sentinelRef
 } = useInfiniteScroll({
-  boardId: boardId.value,
+  boardId: boardId,
   config: {
     pageSize: 12,
     threshold: 200,
@@ -153,19 +156,16 @@ const {
   }
 })
 
-// Search & Filters
+// Search & Filters - передаём изображения из infinite scroll
 const { 
   filteredImages,
   hasActiveFilters, 
   clearFilters 
-} = useSearch(boardId.value)
+} = useSearch(boardId.value, infiniteImages)
 
-// Отображаемые изображения
+// Отображаемые изображения - всегда используем filteredImages, т.к. там применяется сортировка
 const displayedImages = computed(() => {
-  if (hasActiveFilters.value) {
-    return filteredImages.value
-  }
-  return infiniteImages.value
+  return filteredImages.value
 })
 
 // Модальные окна
@@ -257,6 +257,8 @@ const handleImagesUploaded = () => {
 }
 
 onMounted(async () => {
+  // Очищаем store перед загрузкой новой доски
+  imagesStore.resetPagination()
   await loadBoard(boardId.value)
   if (currentBoard.value) {
     await loadMore()
@@ -265,11 +267,15 @@ onMounted(async () => {
 
 onUnmounted(() => {
   clearCurrentBoard()
+  // Очищаем изображения при выходе со страницы доски
+  imagesStore.resetPagination()
   document.body.style.overflow = ''
 })
 
 watch(boardId, async (newId) => {
   if (newId) {
+    // Очищаем store при смене доски
+    imagesStore.resetPagination()
     await loadBoard(newId)
     if (currentBoard.value) {
       await reset()

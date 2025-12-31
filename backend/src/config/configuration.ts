@@ -2,6 +2,7 @@ export default () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '3001', 10),
   apiPrefix: process.env.API_PREFIX || 'api',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
 
   database: {
     host: process.env.DATABASE_HOST || 'localhost',
@@ -30,12 +31,21 @@ export default () => ({
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   },
 
+  // Mail Configuration (SMTP)
+  mail: {
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.SMTP_FROM || 'SnapBoard <noreply@snapboard.com>',
+  },
+
   // Rate Limiting Configuration
   rateLimit: {
     // Общий лимит для всех запросов
     general: {
       windowMs: parseInt(process.env.RATE_LIMIT_WINDOW || '900000', 10), // 15 минут
-      max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10), // 100 запросов
+      max: parseInt(process.env.RATE_LIMIT_MAX || '1000', 10), // 1000 запросов
     },
     // Лимит для auth endpoints (защита от брутфорса)
     auth: {

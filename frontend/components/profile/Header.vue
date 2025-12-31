@@ -1,12 +1,12 @@
 <template>
   <header class="profile-header">
     <ProfileAvatar
-      :src="user.avatar"
+      :src="avatarUrl"
       :name="user.name || user.username"
       size="xl"
       :editable="!isEditing"
       @change="$emit('avatar-change', $event)"
-      @error="handleAvatarError"
+      @error="$emit('avatar-error', $event)"
     />
     
     <div class="profile-header__info">
@@ -31,6 +31,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { User, UserStats } from '~/types/user'
 
 interface Props {
@@ -39,17 +40,20 @@ interface Props {
   isEditing: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
-const emit = defineEmits<{
+defineEmits<{
   edit: []
   'avatar-change': [file: File]
+  'avatar-error': [message: string]
 }>()
 
-const handleAvatarError = (message: string) => {
-  // TODO: Show toast notification
-  console.error('Avatar error:', message)
-}
+const avatarUrl = computed(() => {
+  const avatar = props.user.avatar
+  if (!avatar) return undefined
+  // Аватары раздаются напрямую через /uploads, без /api prefix
+  return avatar
+})
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
@@ -69,7 +73,8 @@ const formatDate = (dateString: string) => {
   align-items: flex-start
   gap: 32px
   padding: 32px
-  background: white
+  background: var(--card-bg)
+  border: 1px solid var(--card-border)
   border-radius: $radius-lg
   
   @include mobile
@@ -85,7 +90,7 @@ const formatDate = (dateString: string) => {
   &__name
     font-size: 28px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
     margin-bottom: 4px
     
     @include mobile
@@ -93,18 +98,18 @@ const formatDate = (dateString: string) => {
   
   &__email
     font-size: 16px
-    color: $gray-500
+    color: var(--text-secondary)
     margin-bottom: 8px
   
   &__bio
     font-size: 15px
-    color: $gray-600
+    color: var(--text-secondary)
     margin-bottom: 8px
     line-height: 1.5
   
   &__joined
     font-size: 14px
-    color: $gray-400
+    color: var(--text-muted)
     margin-bottom: 16px
   
   &__edit-btn

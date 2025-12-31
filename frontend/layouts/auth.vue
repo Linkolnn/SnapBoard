@@ -9,7 +9,7 @@
       </article>
     </main>
     
-    <LayoutFooter compact />
+    <LayoutFooter />
   </div>
 </template>
 

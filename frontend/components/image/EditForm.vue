@@ -2,14 +2,14 @@
   <form class="image-edit-form" @submit.prevent="handleSubmit">
     <h3 class="image-edit-form__title">Редактировать изображение</h3>
     
-    <BaseInput
+    <CommonBaseInput
       v-model="form.title"
       label="Название"
       placeholder="Введите название..."
       :disabled="isSubmitting"
     />
     
-    <BaseTextarea
+    <CommonBaseTextarea
       v-model="form.description"
       label="Описание"
       placeholder="Добавьте описание..."
@@ -27,22 +27,22 @@
     </div>
     
     <div class="image-edit-form__actions">
-      <BaseButton
+      <CommonBaseButton
         variant="secondary"
         :disabled="isSubmitting"
         full-width
         @click="handleCancel"
       >
         Отмена
-      </BaseButton>
-      <BaseButton
+      </CommonBaseButton>
+      <CommonBaseButton
         type="submit"
         :loading="isSubmitting"
         :disabled="isSubmitting"
         full-width
       >
         {{ isSubmitting ? 'Сохранение...' : 'Сохранить' }}
-      </BaseButton>
+      </CommonBaseButton>
     </div>
   </form>
 </template>
@@ -99,7 +99,7 @@ const handleCancel = () => {
   &__title
     font-size: 18px
     font-weight: 600
-    color: $text-light
+    color: var(--text-primary)
     margin-bottom: 20px
 
   &__field

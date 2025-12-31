@@ -50,7 +50,7 @@ useHead({
 
 .static-page
   min-height: 100vh
-  background: $gray-50
+  background: var(--bg-primary)
   padding: 32px 0
 
   &__container
@@ -63,11 +63,12 @@ useHead({
   h1
     font-size: 36px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
     margin-bottom: 32px
 
   &__section
-    background: white
+    background: var(--card-bg)
+    border: 1px solid var(--card-border)
     border-radius: $radius-lg
     padding: 32px
     margin-bottom: 24px
@@ -75,15 +76,15 @@ useHead({
     h2
       font-size: 20px
       font-weight: 600
-      color: $text-light
+      color: var(--text-primary)
       margin-bottom: 16px
 
     p
-      color: $gray-600
+      color: var(--text-secondary)
       line-height: 1.7
 
     a
-      color: $primary-color
+      color: var(--accent-color)
       text-decoration: none
       
       &:hover

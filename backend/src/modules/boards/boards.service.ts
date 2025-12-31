@@ -123,9 +123,10 @@ export class BoardsService {
       throw new NotFoundException('Доска не найдена');
     }
 
-    // Проверка доступа к приватной доске
-    if (board.isPrivate && board.userId !== currentUserId) {
-      throw new ForbiddenException('Доступ к приватной доске запрещён');
+    // Проверка доступа: только владелец может видеть свою доску
+    // Доски являются личными и не доступны другим пользователям
+    if (board.userId !== currentUserId) {
+      throw new ForbiddenException('Доступ к доске запрещён');
     }
 
     // Подсчёт изображений
@@ -174,8 +175,19 @@ export class BoardsService {
     totalPages: number;
     hasMore: boolean;
   }> {
-    // Проверяем доступ к доске
-    await this.findOne(boardId, currentUserId);
+    // Проверяем существование доски
+    const board = await this.boardsRepository.findOne({
+      where: { id: boardId },
+    });
+
+    if (!board) {
+      throw new NotFoundException('Доска не найдена');
+    }
+
+    // Проверка доступа: только владелец может видеть изображения своей доски
+    if (board.userId !== currentUserId) {
+      throw new ForbiddenException('Доступ к доске запрещён');
+    }
 
     // Получаем собственные изображения доски
     const ownImages = await this.imagesRepository

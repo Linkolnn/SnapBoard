@@ -57,18 +57,18 @@ const formatDate = (dateString: string): string => {
   &__title
     font-size: 20px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
     margin-bottom: 12px
     word-break: break-word
 
   &__description
     font-size: 15px
-    color: $gray-600
+    color: var(--text-secondary)
     line-height: 1.6
     margin-bottom: 16px
 
     &--empty
-      color: $gray-400
+      color: var(--text-muted)
       font-style: italic
 
   &__tags
@@ -79,15 +79,16 @@ const formatDate = (dateString: string): string => {
 
   &__tag
     padding: 4px 12px
-    background: rgba($primary-color, 0.1)
-    color: $primary-color
+    background: var(--accent-light)
+    color: var(--accent-color)
     border-radius: $radius-full
     font-size: 13px
     font-weight: 500
 
   &__meta
     padding-top: 16px
-    border-top: 1px solid $gray-200
+    border-top: 1px solid var(--modal-bg)
+    background: var(--modal-bg)
 
   &__meta-item
     display: flex
@@ -96,12 +97,12 @@ const formatDate = (dateString: string): string => {
     font-size: 14px
 
     &:not(:last-child)
-      border-bottom: 1px solid $gray-100
+      border-bottom: 1px solid var(--modal-bg)
 
   &__meta-label
-    color: $gray-500
+    color: var(--text-muted)
 
   &__meta-value
-    color: $text-light
+    color: var(--text-primary)
     font-weight: 500
 </style>

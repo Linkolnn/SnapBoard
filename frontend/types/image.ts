@@ -13,7 +13,9 @@ export interface Image {
   height?: number
   size?: number
   mimeType?: string
+  isFavorite?: boolean
   createdAt: string
+  updatedAt?: string
 }
 
 /**

@@ -53,6 +53,13 @@ services:
       # Upload
       UPLOAD_DIR: /app/uploads
       MAX_FILE_SIZE: 10485760
+      # SMTP (Mail)
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: jsjsvhsuhx@gmail.com
+      SMTP_PASS: qntoubxlrraxkhkr   # 16-символьный пароль без пробелов
+      SMTP_FROM: "SnapBoard <jsjsvhsuhx@gmail.com>"
+      FRONTEND_URL: http://localhost:3000
     ports:
       - "3001:3001"
     depends_on:

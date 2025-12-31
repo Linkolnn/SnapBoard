@@ -11,7 +11,7 @@
       />
       
       <SearchSortSelect
-        v-model="sortBy"
+        v-model="sortByModel"
       />
     </div>
     
@@ -40,13 +40,20 @@
 </template>
 
 <script setup lang="ts">
+import { toRef, computed } from 'vue'
 import { useSearch } from '~/composables/useSearch'
+import type { Image } from '~/types/image'
+import type { SortOption } from '~/types/search'
 
 interface Props {
   boardId?: string
+  images?: Image[]
 }
 
 const props = defineProps<Props>()
+
+// Создаём реактивную ссылку на изображения
+const imagesRef = toRef(props, 'images')
 
 const {
   query,
@@ -60,10 +67,17 @@ const {
   search,
   setTags,
   toggleTag,
+  setSortBy,
   removeFromHistory,
   clearHistory,
   clearFilters
-} = useSearch(props.boardId)
+} = useSearch(props.boardId, props.images ? imagesRef as any : undefined)
+
+// Computed для v-model на sortBy
+const sortByModel = computed({
+  get: () => sortBy.value,
+  set: (value: SortOption) => setSortBy(value)
+})
 
 const handleSearch = (searchQuery: string) => {
   search(searchQuery)

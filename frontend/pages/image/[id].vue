@@ -56,9 +56,9 @@
             <CommonBaseIconButton 
               variant="ghost"
               size="lg"
-              @click="handleOpenSaveModal"
+              @click="downloadImage"
             >
-              📌
+              ⬇️
             </CommonBaseIconButton>
             
             <CommonBaseIconButton 
@@ -82,21 +82,11 @@
         </div>
       </div>
     </div>
-
-    <!-- Модал сохранения на доску -->
-    <ImageSaveToBoardModal
-      :is-open="isSaveModalOpen"
-      :image-id="image?.id || null"
-      :saved-board-ids="savedBoardIds"
-      @close="isSaveModalOpen = false"
-      @save="handleSaveToBoard"
-      @remove="handleRemoveFromBoard"
-    />
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFavorites } from '~/composables/useFavorites'
 import { useAuthActions } from '~/composables/useAuthActions'
@@ -107,21 +97,21 @@ import type { Image } from '~/types/image'
 const route = useRoute()
 const router = useRouter()
 const imagesStore = useImagesStore()
-const { isFavorite, toggleFavorite } = useFavorites()
-const { requireAuth, checkAuth } = useAuthActions()
+const { checkIsFavorite, toggleFavorite } = useFavorites()
+const { requireAuth } = useAuthActions()
 const toast = useToast()
 
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const image = ref<Image | null>(null)
 const recommendations = ref<Image[]>([])
-const isSaveModalOpen = ref(false)
-const savedBoardIds = ref<string[]>([])
+const isFavoriteImage = ref(false)
 
-const isFavoriteImage = computed(() => {
-  if (!image.value) return false
-  return isFavorite(image.value.id)
-})
+// Загрузка статуса избранного
+const loadFavoriteStatus = async () => {
+  if (!image.value) return
+  isFavoriteImage.value = await checkIsFavorite(image.value.id)
+}
 
 useHead(() => ({
   title: image.value?.title 
@@ -152,6 +142,7 @@ const loadImage = async () => {
 
     image.value = found
     loadRecommendations()
+    loadFavoriteStatus()
   } catch (e) {
     error.value = 'Не удалось загрузить изображение'
     console.error('Error loading image:', e)
@@ -200,40 +191,57 @@ const loadRecommendations = () => {
     .map(item => item.img)
 }
 
-const handleToggleFavorite = () => {
+const handleToggleFavorite = async () => {
   if (!image.value) return
 
-  requireAuth(() => {
-    const wasInFavorites = isFavorite(image.value!.id)
-    toggleFavorite(image.value!.id)
-
-    if (wasInFavorites) {
-      toast.info('Удалено из избранного')
+  requireAuth(async () => {
+    const result = await toggleFavorite(image.value!.id, isFavoriteImage.value)
+    
+    if (result.success) {
+      isFavoriteImage.value = result.isFavorite
+      if (result.isFavorite) {
+        toast.success('Добавлено в избранное')
+      } else {
+        toast.info('Удалено из избранного')
+      }
     } else {
-      toast.success('Добавлено в избранное')
+      toast.error('Не удалось обновить избранное')
     }
   })
 }
 
-const handleOpenSaveModal = () => {
+const downloadImage = async () => {
   if (!image.value) return
 
-  if (!checkAuth()) {
-    requireAuth(() => {})
-    return
+  const currentImage = image.value
+  
+  try {
+    const response = await fetch(currentImage.url)
+    const blob = await response.blob()
+    
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Получаем расширение из URL или используем jpg по умолчанию
+    const urlParts = currentImage.url.split('.')
+    const lastPart = urlParts[urlParts.length - 1] || 'jpg'
+    const extension = lastPart.split('?')[0] || 'jpg'
+    const filename = currentImage.title 
+      ? `${currentImage.title.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.${extension}`
+      : `image.${extension}`
+    
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    toast.success('Изображение скачано')
+  } catch (err) {
+    console.error('Download error:', err)
+    toast.error('Не удалось скачать изображение')
   }
-
-  isSaveModalOpen.value = true
-}
-
-const handleSaveToBoard = (boardId: string) => {
-  if (!savedBoardIds.value.includes(boardId)) {
-    savedBoardIds.value.push(boardId)
-  }
-}
-
-const handleRemoveFromBoard = (boardId: string) => {
-  savedBoardIds.value = savedBoardIds.value.filter(id => id !== boardId)
 }
 
 const shareImage = async () => {
@@ -290,7 +298,7 @@ onMounted(() => {
 
 .image-page
   min-height: 100vh
-  background: $gray-50
+  background: var(--bg-primary)
   padding: 32px 0
 
   &__container
@@ -310,9 +318,11 @@ onMounted(() => {
     gap: 16px
     padding: 64px 24px
     text-align: center
+    color: var(--text-secondary)
 
   &__error
-    background: white
+    background: var(--card-bg)
+    border: 1px solid var(--card-border)
     border-radius: $radius-lg
 
     &-icon
@@ -320,18 +330,18 @@ onMounted(() => {
 
     h2
       font-size: 24px
-      color: $text-light
+      color: var(--text-primary)
       margin: 0
 
     p
-      color: $gray-400
+      color: var(--text-muted)
       margin: 0
 
   &__btn
     display: inline-block
     padding: 12px 24px
-    background: $primary-color
-    color: white
+    background: var(--accent-color)
+    color: var(--text-inverse)
     text-decoration: none
     border-radius: $radius
     font-weight: 600
@@ -339,7 +349,7 @@ onMounted(() => {
     transition: background 0.2s
 
     &:hover
-      background: darken($primary-color, 10%)
+      background: var(--accent-hover)
 
   &__content
     display: flex
@@ -347,7 +357,8 @@ onMounted(() => {
     gap: 32px
 
   &__image-wrapper
-    background: white
+    background: var(--card-bg)
+    border: 1px solid var(--card-border)
     border-radius: $radius-lg
     padding: 24px
     display: flex
@@ -363,7 +374,8 @@ onMounted(() => {
     border-radius: $radius
 
   &__info
-    background: white
+    background: var(--card-bg)
+    border: 1px solid var(--card-border)
     border-radius: $radius-lg
     padding: 24px
 
@@ -373,7 +385,7 @@ onMounted(() => {
   &__title
     font-size: 28px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
     margin: 0 0 16px
 
     @include mobile
@@ -381,7 +393,7 @@ onMounted(() => {
 
   &__description
     font-size: 16px
-    color: $gray-500
+    color: var(--text-secondary)
     margin: 0 0 16px
     line-height: 1.6
 
@@ -392,9 +404,9 @@ onMounted(() => {
     margin-bottom: 24px
 
   &__tag
-    color: $primary-color
+    color: var(--accent-color)
     font-size: 14px
-    background: rgba($primary-color, 0.1)
+    background: var(--accent-light)
     padding: 4px 12px
     border-radius: 16px
 
@@ -406,7 +418,7 @@ onMounted(() => {
     h2
       font-size: 24px
       font-weight: 600
-      color: $text-light
+      color: var(--text-primary)
       margin-bottom: 24px
 
       @include mobile

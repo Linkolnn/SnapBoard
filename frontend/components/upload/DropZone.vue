@@ -136,21 +136,21 @@ const emitFiles = (files: File[]) => {
 
 .drop-zone
   position: relative
-  border: 2px dashed $gray-300
+  border: 2px dashed var(--border-color)
   border-radius: $radius-lg
   padding: 48px 24px
   text-align: center
   cursor: pointer
   transition: all $transition-fast
-  background: $gray-50
+  background: var(--bg-secondary)
 
   &:hover:not(&--disabled)
-    border-color: $primary-color
-    background: rgba($primary-color, 0.05)
+    border-color: var(--accent-color)
+    background: var(--accent-light)
 
   &--active
-    border-color: $primary-color
-    background: rgba($primary-color, 0.1)
+    border-color: var(--accent-color)
+    background: var(--accent-light)
     border-style: solid
 
     .drop-zone__icon
@@ -178,21 +178,21 @@ const emitFiles = (files: File[]) => {
   &__title
     font-size: 18px
     font-weight: 600
-    color: $text-light
+    color: var(--text-primary)
     margin-bottom: 8px
 
   &__subtitle
     font-size: 14px
-    color: $gray-500
+    color: var(--text-secondary)
     margin-bottom: 16px
 
   &__link
-    color: $primary-color
+    color: var(--accent-color)
     font-weight: 500
     text-decoration: underline
     cursor: pointer
 
   &__hint
     font-size: 12px
-    color: $gray-400
+    color: var(--text-muted)
 </style>

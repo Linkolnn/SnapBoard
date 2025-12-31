@@ -3,7 +3,7 @@
     <CommonBaseButton 
       variant="ghost"
       class="sort-select__trigger"
-      @click="toggleDropdown"
+      @click.stop="toggleDropdown"
     >
       <span class="sort-select__icon">{{ currentOption?.icon }}</span>
       <span class="sort-select__label">{{ currentOption?.label }}</span>
@@ -11,7 +11,7 @@
     </CommonBaseButton>
     
     <Transition name="dropdown">
-      <div v-if="isOpen" class="sort-select__dropdown">
+      <div v-if="isOpen" class="sort-select__dropdown" @click.stop>
         <button
           v-for="option in options"
           :key="option.value"
@@ -77,11 +77,12 @@ const handleClickOutside = (event: MouseEvent) => {
 }
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
+  // Используем capture phase чтобы обработчик не конфликтовал с toggleDropdown
+  document.addEventListener('click', handleClickOutside, true)
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('click', handleClickOutside, true)
 })
 </script>
 

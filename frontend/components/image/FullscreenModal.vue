@@ -52,6 +52,7 @@
           <div class="fullscreen-modal__actions">
             <div class="fullscreen-modal__actions-left">
               <h3 class="fullscreen-modal__title">{{ image.title || 'Без названия' }}</h3>
+              <p class="fullscreen-modal__description"> {{ image.description || 'Нет описания' }} </p>
               <div v-if="image.tags?.length" class="fullscreen-modal__tags">
                 <span 
                   v-for="(tag, index) in image.tags.slice(0, 5)" 
@@ -77,9 +78,9 @@
                 variant="ghost"
                 size="lg"
                 class="fullscreen-modal__btn"
-                @click="handleOpenSaveModal"
+                @click="downloadImage"
               >
-                📌
+                ⬇️
               </CommonBaseIconButton>
               
               <CommonBaseIconButton 
@@ -114,23 +115,13 @@
             </div>
           </div>
         </div>
-
-        <!-- Модал сохранения на доску -->
-        <ImageSaveToBoardModal
-          :is-open="isSaveModalOpen"
-          :image-id="image?.id || null"
-          :saved-board-ids="savedBoardIds"
-          @close="isSaveModalOpen = false"
-          @save="handleSaveToBoard"
-          @remove="handleRemoveFromBoard"
-        />
       </div>
     </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import type { Image, ImageViewContext } from '~/types/image'
 import { useFavorites } from '~/composables/useFavorites'
 import { useRecommendations } from '~/composables/useRecommendations'
@@ -152,25 +143,28 @@ const emit = defineEmits<{
   imageSelect: [image: Image]
 }>()
 
-const { isFavorite, toggleFavorite } = useFavorites()
+const { checkIsFavorite, toggleFavorite } = useFavorites()
 const { recommendations, isLoading: isLoadingRecommendations, loadRecommendations } = useRecommendations()
-const { requireAuth, checkAuth } = useAuthActions()
+const { requireAuth } = useAuthActions()
 const toast = useToast()
 
 const contentRef = ref<HTMLElement | null>(null)
-const isSaveModalOpen = ref(false)
-const savedBoardIds = ref<string[]>([])
+const isFavoriteImage = ref(false)
 
-// Проверка избранного
-const isFavoriteImage = computed(() => {
-  if (!props.image) return false
-  return isFavorite(props.image.id)
-})
+// Загрузка статуса избранного
+const loadFavoriteStatus = async () => {
+  if (!props.image) {
+    isFavoriteImage.value = false
+    return
+  }
+  isFavoriteImage.value = await checkIsFavorite(props.image.id)
+}
 
-// Загружаем рекомендации при смене изображения
+// Загружаем рекомендации и статус избранного при смене изображения
 watch(() => props.image?.id, async (newId) => {
   if (props.isOpen && newId) {
     await loadRecommendations(newId, 12)
+    await loadFavoriteStatus()
     // Скроллим контент наверх
     if (contentRef.value) {
       contentRef.value.scrollTop = 0
@@ -181,6 +175,7 @@ watch(() => props.image?.id, async (newId) => {
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen && props.image) {
     await loadRecommendations(props.image.id, 12)
+    await loadFavoriteStatus()
     document.body.style.overflow = 'hidden'
   } else {
     document.body.style.overflow = ''
@@ -203,45 +198,58 @@ const handlePrev = () => {
   }
 }
 
-const handleToggleFavorite = () => {
+const handleToggleFavorite = async () => {
   if (!props.image) return
   
   // Проверка авторизации
-  requireAuth(() => {
-    // Проверяем состояние ДО переключения
-    const wasInFavorites = isFavorite(props.image!.id)
-    toggleFavorite(props.image!.id)
+  requireAuth(async () => {
+    const result = await toggleFavorite(props.image!.id, isFavoriteImage.value)
     
-    if (wasInFavorites) {
-      toast.info('Удалено из избранного')
+    if (result.success) {
+      isFavoriteImage.value = result.isFavorite
+      if (result.isFavorite) {
+        toast.success('Добавлено в избранное')
+      } else {
+        toast.info('Удалено из избранного')
+      }
     } else {
-      toast.success('Добавлено в избранное')
+      toast.error('Не удалось обновить избранное')
     }
   })
 }
 
-const handleOpenSaveModal = () => {
+const downloadImage = async () => {
   if (!props.image) return
-  
-  // Проверка авторизации
-  if (!checkAuth()) {
-    requireAuth(() => {})
-    return
-  }
-  
-  isSaveModalOpen.value = true
-}
 
-const handleSaveToBoard = (boardId: string) => {
-  // TODO: API call to save image to board
-  if (!savedBoardIds.value.includes(boardId)) {
-    savedBoardIds.value.push(boardId)
+  const currentImage = props.image
+  
+  try {
+    const response = await fetch(currentImage.url)
+    const blob = await response.blob()
+    
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Получаем расширение из URL или используем jpg по умолчанию
+    const urlParts = currentImage.url.split('.')
+    const lastPart = urlParts[urlParts.length - 1] || 'jpg'
+    const extension = lastPart.split('?')[0] || 'jpg'
+    const filename = currentImage.title 
+      ? `${currentImage.title.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.${extension}`
+      : `image.${extension}`
+    
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    toast.success('Изображение скачано')
+  } catch (err) {
+    console.error('Download error:', err)
+    toast.error('Не удалось скачать изображение')
   }
-}
-
-const handleRemoveFromBoard = (boardId: string) => {
-  // TODO: API call to remove image from board
-  savedBoardIds.value = savedBoardIds.value.filter(id => id !== boardId)
 }
 
 const shareImage = async () => {
@@ -408,6 +416,7 @@ onUnmounted(() => {
   
   &__actions-left
     flex: 1
+    width: 100%
   
   &__actions-right
     display: flex
@@ -426,6 +435,11 @@ onUnmounted(() => {
     @include mobile
       font-size: 18px
       text-align: center
+
+  &__description
+    color: var(--text-primary)
+    font-size: 14px
+
   
   &__tags
     display: flex

@@ -110,18 +110,18 @@ const handleRetry = () => {
   display: flex
   gap: 12px
   padding: 12px
-  background: white
+  background: var(--card-bg)
   border-radius: $radius
-  border: 1px solid $gray-200
+  border: 1px solid var(--border-color)
   transition: all $transition-fast
 
   &--success
-    border-color: $success-color
-    background: rgba($success-color, 0.05)
+    border-color: var(--success-color)
+    background: var(--success-light)
 
   &--error
-    border-color: $error-color
-    background: rgba($error-color, 0.05)
+    border-color: var(--error-color)
+    background: var(--error-light)
 
   &__preview
     position: relative
@@ -152,7 +152,7 @@ const handleRetry = () => {
   &__status-icon
     width: 32px
     height: 32px
-    background: $success-color
+    background: var(--success-color)
     color: white
     border-radius: 50%
     display: flex
@@ -161,7 +161,7 @@ const handleRetry = () => {
     font-size: 16px
 
     &--error
-      background: $error-color
+      background: var(--error-color)
 
   &__info
     flex: 1
@@ -174,35 +174,35 @@ const handleRetry = () => {
     background: transparent
     font-size: 14px
     font-weight: 500
-    color: $text-light
+    color: var(--text-primary)
 
     &:focus
       outline: none
 
     &::placeholder
-      color: $gray-400
+      color: var(--text-muted)
 
     &:disabled
-      color: $gray-500
+      color: var(--text-secondary)
 
   &__meta
     font-size: 12px
-    color: $gray-400
+    color: var(--text-muted)
     margin-top: 4px
 
   &__error
-    color: $error-color
+    color: var(--error-color)
 
   &__progress
     height: 4px
-    background: $gray-200
+    background: var(--bg-tertiary)
     border-radius: 2px
     margin-top: 8px
     overflow: hidden
 
   &__progress-bar
     height: 100%
-    background: $primary-color
+    background: var(--accent-color)
     border-radius: 2px
     transition: width 0.3s ease
 

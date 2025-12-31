@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Body,
+  Query,
   Res,
   UseGuards,
   HttpCode,
@@ -11,7 +12,7 @@ import {
 import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, AuthResponseDto, UserResponseDto } from './dto';
+import { RegisterDto, LoginDto, AuthResponseDto, UserResponseDto, ForgotPasswordDto, ResetPasswordDto } from './dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -109,5 +110,41 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Не авторизован' })
   async getMe(@CurrentUser('userId') userId: string) {
     return this.authService.getMe(userId);
+  }
+
+  /**
+   * Запрос сброса пароля
+   */
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Запрос сброса пароля' })
+  @ApiResponse({ status: 200, description: 'Инструкции отправлены (если email существует)' })
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  /**
+   * Проверка токена сброса пароля
+   */
+  @Public()
+  @Get('verify-reset-token')
+  @ApiOperation({ summary: 'Проверка токена сброса пароля' })
+  @ApiResponse({ status: 200, description: 'Токен действителен' })
+  async verifyResetToken(@Query('token') token: string) {
+    return this.authService.verifyResetToken(token);
+  }
+
+  /**
+   * Сброс пароля по токену
+   */
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Сброс пароля по токену' })
+  @ApiResponse({ status: 200, description: 'Пароль успешно изменён' })
+  @ApiResponse({ status: 400, description: 'Недействительный или истёкший токен' })
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.password);
   }
 }

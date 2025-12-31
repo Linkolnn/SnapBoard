@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useInfiniteScroll } from '~/composables/useInfiniteScroll'
 import { useSearch } from '~/composables/useSearch'
 import type { Image, ImageViewContext } from '~/types/image'
@@ -69,7 +69,8 @@ const {
   hasMore,
   error,
   retry,
-  sentinelRef
+  sentinelRef,
+  reset
 } = useInfiniteScroll({
   boardId: 'home',
   config: {
@@ -80,7 +81,21 @@ const {
 })
 
 // Поиск и фильтрация
-const { filteredImages, hasActiveFilters, clearFilters } = useSearch()
+const { filteredImages, hasActiveFilters, clearFilters, query } = useSearch()
+
+// Слушаем событие сброса поиска из Header
+const handleSearchCleared = () => {
+  // Header уже вызвал clearFilters(), перезагружаем данные
+  reset()
+}
+
+onMounted(() => {
+  window.addEventListener('search-cleared', handleSearchCleared)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('search-cleared', handleSearchCleared)
+})
 
 // Отображаемые изображения с учётом фильтра
 const displayedImages = computed(() => {

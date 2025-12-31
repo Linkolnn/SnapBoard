@@ -1,7 +1,7 @@
 <template>
   <header class="app-header">
     <div class="app-header__container">
-      <NuxtLink to="/" class="app-header__logo-link">
+      <NuxtLink to="/" class="app-header__logo-link" @click="handleLogoClick">
         <img src="/favicon.ico" alt="SnapBoard" class="app-header__logo-icon" />
         <span class="app-header__logo-text">SnapBoard</span>
       </NuxtLink>
@@ -31,7 +31,7 @@
             <input 
               v-model="searchQuery"
               class="app-header__search-inp"
-              type="search" 
+              type="text" 
               placeholder="Поиск изображений..." 
               @keydown.enter="handleSearch"
               @focus="showSearchDropdown = true"
@@ -91,9 +91,11 @@
         <!-- Меню для авторизованных -->
         <article v-else class="app-header__user">
           <div class="app-header__user-menu" @click="toggleUserMenu">
-            <div class="app-header__avatar">
-              {{ userInitials }}
-            </div>
+            <ProfileAvatar 
+              :src="userAvatar" 
+              :name="userName" 
+              size="sm" 
+            />
             <span class="app-header__user-name">{{ userName }}</span>
             <span class="app-header__dropdown-icon">▼</span>
           </div>
@@ -135,6 +137,7 @@
       :is-authenticated="isAuthenticated"
       :user-name="userName"
       :user-initials="userInitials"
+      :user-avatar="userAvatar"
       @logout="handleLogout"
     />
   </header>
@@ -184,6 +187,12 @@ const userInitials = computed(() => {
   const name = user.value?.username || 'U'
   return name.charAt(0).toUpperCase()
 })
+const userAvatar = computed(() => {
+  const avatar = user.value?.avatar
+  if (!avatar) return undefined
+  // Аватары раздаются напрямую через /uploads, без /api prefix
+  return avatar
+})
 
 const isMobileMenuOpen = ref(false)
 const isUserMenuOpen = ref(false)
@@ -229,7 +238,24 @@ const handleSearch = () => {
 
 const clearSearch = () => {
   searchQuery.value = ''
-  searchStore.setQuery('')
+  searchStore.clearFilters()
+  
+  // Если на главной - принудительно обновляем
+  if (route.path === '/') {
+    // Эмитим событие для обновления страницы
+    window.dispatchEvent(new CustomEvent('search-cleared'))
+  }
+}
+
+// Сброс поиска при клике на логотип
+const handleLogoClick = () => {
+  searchStore.clearFilters()
+  searchQuery.value = ''
+  
+  // Если уже на главной - принудительно обновляем
+  if (route.path === '/') {
+    window.dispatchEvent(new CustomEvent('search-cleared'))
+  }
 }
 
 const handleSearchBlur = () => {
@@ -341,7 +367,7 @@ const clearSearchHistory = () => {
     display: flex
     align-items: center
     gap: 8px
-    padding: 8px 16px
+    padding: 10px 16px
     background: var(--bg-secondary)
     border: 2px solid transparent
     border-radius: $radius
@@ -350,6 +376,11 @@ const clearSearchHistory = () => {
     &:focus-within
       background: var(--bg-primary)
       border-color: var(--accent-color)
+
+    .icon-btn
+      &--sm
+        width: 20px
+        height: 20px
   
   &__search-icon
     font-size: 14px
@@ -362,6 +393,11 @@ const clearSearchHistory = () => {
     font-size: 14px
     color: var(--text-primary)
     outline: none
+    border: none
+    // Меняем тип на text чтобы убрать нативную кнопку очистки
+    -webkit-appearance: none
+    -moz-appearance: none
+    appearance: none
     
     &::placeholder
       color: var(--text-muted)
@@ -438,18 +474,6 @@ const clearSearchHistory = () => {
     
     &:hover
       background: var(--bg-tertiary)
-  
-  &__avatar
-    width: 32px
-    height: 32px
-    background: var(--accent-color)
-    color: white
-    border-radius: 50%
-    display: flex
-    align-items: center
-    justify-content: center
-    font-weight: 600
-    font-size: 14px
   
   &__user-name
     font-size: 14px

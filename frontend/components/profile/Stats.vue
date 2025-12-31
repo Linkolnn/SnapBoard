@@ -38,9 +38,11 @@ defineProps<Props>()
 .profile-stats
   display: flex
   align-items: center
+  justify-content: space-evenly
   gap: 24px
   padding: 24px
-  background: white
+  background: var(--card-bg)
+  border: 1px solid var(--card-border)
   border-radius: $radius-lg
   
   @include mobile
@@ -57,14 +59,14 @@ defineProps<Props>()
   &__value
     font-size: 28px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
     
     @include mobile
       font-size: 24px
   
   &__label
     font-size: 14px
-    color: $gray-500
+    color: var(--text-secondary)
     
     @include mobile
       font-size: 12px
@@ -72,7 +74,7 @@ defineProps<Props>()
   &__divider
     width: 1px
     height: 40px
-    background: $gray-200
+    background: var(--border-color)
     
     @include mobile
       height: 32px

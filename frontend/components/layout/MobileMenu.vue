@@ -18,9 +18,11 @@
 
                     <!-- Секция пользователя для авторизованных -->
                     <div v-if="isAuthenticated" class="mobile-menu__user">
-                        <div class="mobile-menu__avatar">
-                            {{ userInitials }}
-                        </div>
+                        <ProfileAvatar 
+                            :src="userAvatar" 
+                            :name="userName" 
+                            size="sm" 
+                        />
                         <div class="mobile-menu__user-info">
                             <span class="mobile-menu__user-name">{{ userName }}</span>
                         </div>
@@ -125,12 +127,14 @@ interface Props {
     isAuthenticated?: boolean
     userName?: string
     userInitials?: string
+    userAvatar?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
     isAuthenticated: false,
     userName: 'Пользователь',
-    userInitials: 'U'
+    userInitials: 'U',
+    userAvatar: undefined
 })
 
 const emit = defineEmits<{
@@ -306,19 +310,6 @@ watch(
     padding: 20px 24px
     background: var(--bg-secondary)
     border-bottom: 1px solid var(--border-color)
-  
-  &__avatar
-    width: 48px
-    height: 48px
-    background: var(--accent-color)
-    color: white
-    border-radius: 50%
-    display: flex
-    align-items: center
-    justify-content: center
-    font-weight: 600
-    font-size: 18px
-    flex-shrink: 0
   
   &__user-info
     flex: 1

@@ -91,15 +91,17 @@ export class BoardsController {
    * Получение одной доски
    */
   @Get(':id')
-  @Public()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Получить доску по ID' })
   @ApiParam({ name: 'id', description: 'ID доски' })
   @ApiResponse({ status: 200, description: 'Доска', type: BoardResponseDto })
+  @ApiResponse({ status: 401, description: 'Не авторизован' })
   @ApiResponse({ status: 403, description: 'Доступ запрещён' })
   @ApiResponse({ status: 404, description: 'Доска не найдена' })
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('userId') userId?: string,
+    @CurrentUser('userId') userId: string,
   ) {
     const board = await this.boardsService.findOne(id, userId);
     return this.formatBoard(board);

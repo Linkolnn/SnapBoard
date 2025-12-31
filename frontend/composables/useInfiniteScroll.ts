@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted, onUnmounted, type Ref, type ComputedRef } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, type Ref, type ComputedRef, unref, isRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useImagesStore } from '~/store/images'
 import { useSearchStore } from '~/store/search'
@@ -7,7 +7,7 @@ import type { InfiniteScrollConfig, LoadingState, PageRequest } from '~/types/pa
 import { DEFAULT_INFINITE_SCROLL_CONFIG } from '~/types/pagination'
 
 interface UseInfiniteScrollOptions {
-  boardId: string
+  boardId?: string | Ref<string>
   config?: InfiniteScrollConfig
 }
 
@@ -32,6 +32,12 @@ export function useInfiniteScroll(options: UseInfiniteScrollOptions): UseInfinit
   const { boardId, config = {} } = options
   const mergedConfig = { ...DEFAULT_INFINITE_SCROLL_CONFIG, ...config }
   
+  // Получаем текущее значение boardId (поддержка реактивных и обычных значений)
+  const getCurrentBoardId = () => {
+    const id = unref(boardId)
+    return id === 'home' || !id ? undefined : id
+  }
+  
   const imagesStore = useImagesStore()
   const searchStore = useSearchStore()
   
@@ -41,6 +47,9 @@ export function useInfiniteScroll(options: UseInfiniteScrollOptions): UseInfinit
   const sentinelRef = ref<HTMLElement | null>(null)
   const observerActive = ref(true)
   const observer = ref<IntersectionObserver | null>(null)
+  const isLoadingLock = ref(false) // Защита от множественных вызовов
+  const isInitialized = ref(false) // Флаг первой загрузки
+  const isResetting = ref(false) // Защита от множественных reset
   
   const items = computed(() => images.value)
   const isLoading = computed(() => pagination.value.isLoading)
@@ -58,16 +67,21 @@ export function useInfiniteScroll(options: UseInfiniteScrollOptions): UseInfinit
   const createPageRequest = (pageNum: number): PageRequest => ({
     page: pageNum,
     pageSize: mergedConfig.pageSize!,
-    boardId: boardId === 'home' ? undefined : boardId,
+    boardId: getCurrentBoardId(),
     query: query.value || undefined,
     tags: selectedTags.value.length > 0 ? selectedTags.value : undefined,
     sortBy: sortBy.value
   })
 
   const loadMore = async (): Promise<void> => {
-    if (pagination.value.isLoading || !pagination.value.hasMore) {
+    // Защита от множественных одновременных вызовов
+    if (isLoadingLock.value || pagination.value.isLoading || !pagination.value.hasMore) {
       return
     }
+
+    // Устанавливаем блокировку СРАЗУ, синхронно
+    isLoadingLock.value = true
+    imagesStore.updatePagination({ isLoading: true })
 
     try {
       const request = createPageRequest(pagination.value.page)
@@ -77,7 +91,8 @@ export function useInfiniteScroll(options: UseInfiniteScrollOptions): UseInfinit
       
       imagesStore.updatePagination({
         page: pagination.value.page + 1,
-        hasMore: response.hasMore
+        hasMore: response.hasMore,
+        isLoading: false
       })
       
       if (!response.hasMore) {
@@ -85,16 +100,33 @@ export function useInfiniteScroll(options: UseInfiniteScrollOptions): UseInfinit
       }
     } catch (e) {
       console.error('Error loading more images:', e)
+      imagesStore.updatePagination({ isLoading: false })
+    } finally {
+      isLoadingLock.value = false
     }
   }
 
   const reset = async (): Promise<void> => {
+    // Защита от множественных reset
+    if (isResetting.value) {
+      return
+    }
+    isResetting.value = true
+    
+    // Останавливаем observer перед сбросом
+    stopObserver()
+    isLoadingLock.value = false
+    
     imagesStore.resetPagination()
+    
+    // Перезапускаем observer
     startObserver()
     
     if (mergedConfig.initialLoad) {
       await loadMore()
     }
+    
+    isResetting.value = false
   }
 
   const retry = async (): Promise<void> => {
@@ -130,13 +162,8 @@ export function useInfiniteScroll(options: UseInfiniteScrollOptions): UseInfinit
     observerActive.value = false
   }
 
-  watch(
-    [selectedTags, sortBy],
-    () => {
-      reset()
-    },
-    { deep: true }
-  )
+  // Убран watch на selectedTags/sortBy - reset вызывается явно из компонентов
+  // чтобы избежать множественных вызовов
 
   watch(sentinelRef, (newRef) => {
     if (newRef) {
@@ -147,7 +174,8 @@ export function useInfiniteScroll(options: UseInfiniteScrollOptions): UseInfinit
   })
 
   onMounted(() => {
-    if (mergedConfig.initialLoad) {
+    if (mergedConfig.initialLoad && !isInitialized.value) {
+      isInitialized.value = true
       loadMore()
     }
   })

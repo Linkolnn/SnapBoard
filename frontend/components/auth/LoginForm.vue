@@ -58,7 +58,7 @@
     </article>
 </template>
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useAuthStore } from '~/store/auth'
 import { useFormValidation, requiredRule, emailRule, minLengthRule } from '~/composables/useFormValidation'
 
@@ -66,6 +66,13 @@ import { useFormValidation, requiredRule, emailRule, minLengthRule } from '~/com
  * Store аутентификации
  */
 const authStore = useAuthStore()
+
+/**
+ * Очищаем ошибку при монтировании компонента
+ */
+onMounted(() => {
+  authStore.clearError()
+})
 
 /**
  * Router для навигации после успешного входа

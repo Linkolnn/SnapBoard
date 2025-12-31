@@ -185,7 +185,7 @@ watch(() => props.isOpen, (isOpen) => {
 .upload-modal
   position: fixed
   inset: 0
-  background: rgba(0, 0, 0, 0.5)
+  background: var(--modal-overlay)
   display: flex
   align-items: center
   justify-content: center
@@ -193,7 +193,7 @@ watch(() => props.isOpen, (isOpen) => {
   padding: 16px
 
   &__content
-    background: white
+    background: var(--modal-bg)
     border-radius: $radius-lg
     width: 100%
     max-width: 600px
@@ -201,31 +201,33 @@ watch(() => props.isOpen, (isOpen) => {
     display: flex
     flex-direction: column
     overflow: hidden
+    border: 1px solid var(--border-color)
 
   &__header
     display: flex
     align-items: center
     justify-content: space-between
     padding: 20px 24px
-    border-bottom: 1px solid $gray-200
+    border-bottom: 1px solid var(--border-color)
 
   &__title
     font-size: 20px
     font-weight: 700
-    color: $text-light
+    color: var(--text-primary)
 
   &__close
     width: 32px
     height: 32px
     border: none
-    background: $gray-100
+    background: var(--bg-tertiary)
     border-radius: 50%
     cursor: pointer
     font-size: 16px
+    color: var(--text-primary)
     transition: all $transition-fast
 
     &:hover:not(:disabled)
-      background: $gray-200
+      background: var(--bg-hover)
 
     &:disabled
       opacity: 0.5
@@ -234,7 +236,8 @@ watch(() => props.isOpen, (isOpen) => {
   &__tabs
     display: flex
     padding: 0 24px
-    border-bottom: 1px solid $gray-200
+    border-bottom: 1px solid var(--border-color)
+    background: var(--modal-bg)
 
   &__tab
     padding: 12px 16px
@@ -242,16 +245,16 @@ watch(() => props.isOpen, (isOpen) => {
     border: none
     font-size: 14px
     font-weight: 500
-    color: $gray-500
+    color: var(--text-muted)
     cursor: pointer
     position: relative
     transition: color $transition-fast
 
     &:hover
-      color: $text-light
+      color: var(--text-primary)
 
     &--active
-      color: $primary-color
+      color: var(--accent-color)
 
       &::after
         content: ''
@@ -260,12 +263,13 @@ watch(() => props.isOpen, (isOpen) => {
         left: 0
         right: 0
         height: 2px
-        background: $primary-color
+        background: var(--accent-color)
 
   &__body
     flex: 1
     padding: 24px
     overflow-y: auto
+    background: var(--modal-bg)
 
   &__queue
     margin-top: 24px
@@ -279,7 +283,7 @@ watch(() => props.isOpen, (isOpen) => {
       h3
         font-size: 14px
         font-weight: 600
-        color: $text-light
+        color: var(--text-primary)
 
     &-list
       display: flex
@@ -292,7 +296,8 @@ watch(() => props.isOpen, (isOpen) => {
     display: flex
     gap: 12px
     padding: 20px 24px
-    border-top: 1px solid $gray-200
+    border-top: 1px solid var(--border-color)
+    background: var(--modal-bg)
 
 .modal-enter-active,
 .modal-leave-active

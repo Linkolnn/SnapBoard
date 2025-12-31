@@ -9,9 +9,6 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
-  ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
   HttpCode,
   HttpStatus,
   Query,
@@ -109,11 +106,22 @@ export class UsersController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: './uploads/avatars',
-        filename: (req, file, callback) => {
+        filename: (_req, file, callback) => {
           const uniqueName = `${uuidv4()}${extname(file.originalname)}`;
           callback(null, uniqueName);
         },
       }),
+      fileFilter: (_req, file, callback) => {
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (allowedMimes.includes(file.mimetype)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Поддерживаются только форматы JPEG, PNG, WebP и GIF'), false);
+        }
+      },
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB
+      },
     }),
   )
   @ApiOperation({ summary: 'Загрузить аватар' })
@@ -134,16 +142,11 @@ export class UsersController {
   @ApiResponse({ status: 400, description: 'Неверный формат файла' })
   async uploadAvatar(
     @CurrentUser('userId') userId: string,
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
-          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp|gif)$/ }),
-        ],
-      }),
-    )
-    file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File,
   ) {
+    if (!file) {
+      throw new Error('Файл не загружен');
+    }
     const avatarPath = `/uploads/avatars/${file.filename}`;
     await this.usersService.updateAvatar(userId, avatarPath);
     return {

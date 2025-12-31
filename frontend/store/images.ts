@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useApi } from '~/composables/useApi'
 import type { 
   Image, 
   UpdateImageDto,
@@ -39,10 +40,8 @@ interface ImageResponse {
   updatedAt?: string
 }
 
-interface UploadResponse {
-  image: ImageResponse
-  message: string
-}
+// Ответ от API загрузки - возвращается напрямую без обёртки
+type UploadResponse = ImageResponse
 
 export const useImagesStore = defineStore('images', () => {
   const images = ref<Image[]>([])
@@ -70,7 +69,7 @@ export const useImagesStore = defineStore('images', () => {
     width: data.width,
     height: data.height,
     size: data.size,
-    boardId: data.boardId,
+    boardId: data.boardId || '',
     userId: data.userId,
     isFavorite: data.isFavorite,
     createdAt: data.createdAt,
@@ -144,12 +143,16 @@ export const useImagesStore = defineStore('images', () => {
       }
 
       const previewUrl = await createFilePreview(file)
+      
+      // Извлекаем название файла без расширения
+      const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '')
 
       validFiles.push({
         id: generateUploadId(),
         file,
         previewUrl,
         name: file.name,
+        title: fileNameWithoutExt, // Автоматически подставляем название файла
         size: file.size,
         status: 'pending',
         progress: 0,
@@ -242,7 +245,8 @@ export const useImagesStore = defineStore('images', () => {
         throw new Error('No file or URL provided')
       }
 
-      const newImage = mapImageResponse(response.image)
+      // Ответ приходит напрямую, без обёртки { image: ... }
+      const newImage = mapImageResponse(response)
       images.value.unshift(newImage)
       updateQueueItem(id, { status: 'success', progress: 100 })
 
@@ -300,7 +304,7 @@ export const useImagesStore = defineStore('images', () => {
   const canLoadMore = computed(() => pagination.value.hasMore && !pagination.value.isLoading)
 
   const fetchPagedImages = async (request: PageRequest): Promise<PaginatedResponse<Image>> => {
-    pagination.value.isLoading = true
+    // isLoading устанавливается в useInfiniteScroll перед вызовом
     pagination.value.error = null
 
     try {
@@ -327,13 +331,18 @@ export const useImagesStore = defineStore('images', () => {
       const errorMessage = e.data?.message || 'Не удалось загрузить изображения'
       pagination.value.error = errorMessage
       throw new Error(errorMessage)
-    } finally {
-      pagination.value.isLoading = false
     }
+    // isLoading сбрасывается в useInfiniteScroll после вызова
   }
 
   const appendImages = (newImages: Image[]) => {
-    images.value = [...images.value, ...newImages]
+    // Дедупликация: добавляем только изображения, которых ещё нет
+    const existingIds = new Set(images.value.map(img => img.id))
+    const uniqueNewImages = newImages.filter(img => !existingIds.has(img.id))
+    
+    if (uniqueNewImages.length > 0) {
+      images.value = [...images.value, ...uniqueNewImages]
+    }
   }
 
   const setImages = (newImages: Image[]) => {

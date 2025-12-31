@@ -27,7 +27,7 @@
         <div v-if="boards.length === 0" class="content-tabs__empty">
           <span class="content-tabs__empty-icon">📋</span>
           <p>У вас пока нет досок</p>
-          <CommonBaseButton variant="primary" size="sm" @click="$emit('create-board')">
+          <CommonBaseButton variant="primary" size="sm" @click="goToBoards">
             Создать доску
           </CommonBaseButton>
         </div>
@@ -37,7 +37,7 @@
             v-for="board in boards"
             :key="board.id"
             :board="board"
-            @click="navigateTo(`/boards/${board.id}`)"
+            @click="goToBoard(board.id)"
           />
         </div>
       </template>
@@ -80,6 +80,16 @@ defineEmits<{
   'upload': []
   'image-click': [image: Image]
 }>()
+
+const router = useRouter()
+
+const goToBoards = () => {
+  router.push('/boards')
+}
+
+const goToBoard = (boardId: string) => {
+  router.push(`/boards/${boardId}`)
+}
 </script>
 
 <style lang="sass" scoped>
@@ -87,13 +97,14 @@ defineEmits<{
 @import '@/assets/styles/mixins'
 
 .content-tabs
-  background: white
+  background: var(--card-bg)
+  border: 1px solid var(--card-border)
   border-radius: $radius-lg
   overflow: hidden
   
   &__header
     display: flex
-    border-bottom: 2px solid $gray-100
+    border-bottom: 2px solid var(--border-color)
   
   &__tab
     flex: 1
@@ -102,7 +113,7 @@ defineEmits<{
     border: none
     font-size: 15px
     font-weight: 500
-    color: $gray-500
+    color: var(--text-secondary)
     cursor: pointer
     transition: all $transition-fast
     display: flex
@@ -111,23 +122,24 @@ defineEmits<{
     gap: 8px
     
     &:hover
-      color: $text-light
-      background: $gray-50
+      color: var(--text-primary)
+      background: var(--bg-hover)
     
     &--active
-      color: $primary-color
-      border-bottom: 2px solid $primary-color
+      color: var(--accent-color)
+      border-bottom: 2px solid var(--accent-color)
       margin-bottom: -2px
   
   &__count
-    background: $gray-100
+    background: var(--bg-tertiary)
     padding: 2px 8px
     border-radius: 12px
     font-size: 13px
+    color: var(--text-secondary)
     
     .content-tabs__tab--active &
-      background: rgba($primary-color, 0.1)
-      color: $primary-color
+      background: var(--accent-light)
+      color: var(--accent-color)
   
   &__content
     padding: 24px
@@ -146,7 +158,7 @@ defineEmits<{
     text-align: center
     
     p
-      color: $gray-500
+      color: var(--text-secondary)
       font-size: 15px
   
   &__empty-icon

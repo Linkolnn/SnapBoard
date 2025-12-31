@@ -184,12 +184,12 @@ const handleSubmit = () => {
   align-items: center
   justify-content: center
   padding: 24px
-  background: rgba(0, 0, 0, 0.6)
+  background: var(--modal-overlay)
   
   &__content
     width: 100%
     max-width: 420px
-    background: white
+    background: var(--modal-bg)
     border-radius: $radius-lg
     overflow: hidden
   
@@ -198,12 +198,12 @@ const handleSubmit = () => {
     align-items: center
     justify-content: space-between
     padding: 20px 24px
-    border-bottom: 1px solid $gray-100
+    border-bottom: 1px solid var(--border-color)
     
     h2
       font-size: 18px
       font-weight: 600
-      color: $text-light
+      color: var(--text-primary)
   
   &__form
     padding: 24px
@@ -212,11 +212,11 @@ const handleSubmit = () => {
     gap: 16px
   
   &__error
-    color: $error-color
+    color: var(--error-color)
     font-size: 14px
     text-align: center
     padding: 8px
-    background: rgba($error-color, 0.1)
+    background: var(--error-light)
     border-radius: $radius
   
   &__actions

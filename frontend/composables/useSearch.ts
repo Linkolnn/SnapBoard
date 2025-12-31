@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, type Ref, type ComputedRef, isRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSearchStore } from '~/store/search'
 import { useImagesStore } from '~/store/images'
@@ -8,7 +8,7 @@ import type { SortOption } from '~/types/search'
 /**
  * Composable для поиска и фильтрации изображений
  */
-export const useSearch = (boardId?: string) => {
+export const useSearch = (boardId?: string, externalImages?: Ref<Image[]> | ComputedRef<Image[]>) => {
   const searchStore = useSearchStore()
   const imagesStore = useImagesStore()
 
@@ -23,15 +23,25 @@ export const useSearch = (boardId?: string) => {
   } = storeToRefs(searchStore)
 
   /**
+   * Получение базовых изображений для фильтрации
+   */
+  const baseImages = computed(() => {
+    // Если переданы внешние изображения, используем их
+    if (externalImages && isRef(externalImages)) {
+      return externalImages.value
+    }
+    // Иначе используем изображения из store
+    return boardId 
+      ? imagesStore.imagesByBoard(boardId)
+      : imagesStore.images
+  })
+
+  /**
    * Получение всех уникальных тегов из изображений
    */
   const availableTags = computed(() => {
-    const images = boardId 
-      ? imagesStore.imagesByBoard(boardId)
-      : imagesStore.images
-
     const tagsSet = new Set<string>()
-    images.forEach(img => {
+    baseImages.value.forEach(img => {
       img.tags?.forEach(tag => tagsSet.add(tag))
     })
     
@@ -70,9 +80,7 @@ export const useSearch = (boardId?: string) => {
    * Фильтрация изображений
    */
   const filteredImages = computed(() => {
-    let images = boardId 
-      ? imagesStore.imagesByBoard(boardId)
-      : imagesStore.images
+    let images = baseImages.value
 
     // Фильтр по поисковому запросу
     if (query.value.trim()) {

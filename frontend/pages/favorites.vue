@@ -51,9 +51,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useFavorites } from '~/composables/useFavorites'
-import { useImagesStore } from '~/store/images'
 import type { Image, ImageViewContext } from '~/types/image'
 
 definePageMeta({
@@ -64,14 +63,16 @@ useHead({
   title: 'Избранное - SnapBoard'
 })
 
-const { favoriteIds, favoritesCount, removeFavorite } = useFavorites()
-const imagesStore = useImagesStore()
+const { fetchFavorites, removeFavorite } = useFavorites()
 
 const isLoading = ref(true)
 const favoriteImages = ref<Image[]>([])
+const totalCount = ref(0)
 const isFullscreenOpen = ref(false)
 const selectedImage = ref<Image | null>(null)
 const currentIndex = ref(0)
+
+const favoritesCount = computed(() => totalCount.value)
 
 const viewContext = computed<ImageViewContext>(() => ({
   currentIndex: currentIndex.value,
@@ -94,21 +95,20 @@ const loadFavoriteImages = async () => {
   isLoading.value = true
   
   try {
-    // Получаем все изображения из store
-    const allImages = imagesStore.images
+    // Загружаем избранное напрямую с API
+    const response = await fetchFavorites(1, 50)
     
-    // Если изображений нет в store, загружаем mock данные
-    if (allImages.length === 0) {
-      // Загружаем изображения (mock)
-      const response = await imagesStore.fetchPagedImages({ page: 1, pageSize: 50 })
-      imagesStore.setImages(response.items)
+    if (response) {
+      favoriteImages.value = response.items
+      totalCount.value = response.totalItems
+    } else {
+      favoriteImages.value = []
+      totalCount.value = 0
     }
-    
-    // Фильтруем по избранным ID
-    const ids = favoriteIds.value
-    favoriteImages.value = imagesStore.images.filter(img => ids.includes(img.id))
   } catch (e) {
     console.error('Error loading favorites:', e)
+    favoriteImages.value = []
+    totalCount.value = 0
   } finally {
     isLoading.value = false
   }
@@ -148,11 +148,14 @@ const goToPrev = () => {
   }
 }
 
-// Следим за изменениями избранного
-watch(favoriteIds, () => {
-  const ids = favoriteIds.value
-  favoriteImages.value = imagesStore.images.filter(img => ids.includes(img.id))
-}, { deep: true })
+// Обработчик удаления из избранного
+const handleRemoveFavorite = async (imageId: string) => {
+  const success = await removeFavorite(imageId)
+  if (success) {
+    favoriteImages.value = favoriteImages.value.filter(img => img.id !== imageId)
+    totalCount.value = favoriteImages.value.length
+  }
+}
 
 onMounted(() => {
   loadFavoriteImages()

@@ -9,6 +9,7 @@
         :is-editing="isEditing"
         @edit="startEditing"
         @avatar-change="handleAvatarChange"
+        @avatar-error="handleAvatarError"
       />
       
       <!-- Edit Form -->
@@ -79,6 +80,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useProfile } from '~/composables/useProfile'
+import { useToast } from '~/composables/useToast'
 import type { UpdateProfileDto, ChangePasswordDto } from '~/types/user'
 import type { Image } from '~/types/image'
 
@@ -89,6 +91,8 @@ definePageMeta({
 useHead({
   title: 'Профиль - SnapBoard'
 })
+
+const toast = useToast()
 
 const {
   user,
@@ -124,22 +128,30 @@ onMounted(() => {
 const handleProfileUpdate = async (data: UpdateProfileDto) => {
   const success = await updateProfile(data)
   if (success) {
-    // TODO: Show success toast
+    toast.success('Профиль обновлён')
+  } else {
+    toast.error(error.value || 'Ошибка при обновлении профиля')
   }
 }
 
 const handleAvatarChange = async (file: File) => {
   const success = await uploadAvatar(file)
   if (success) {
-    // TODO: Show success toast
+    toast.success('Аватар обновлён')
+  } else {
+    toast.error(error.value || 'Ошибка при загрузке аватара')
   }
+}
+
+const handleAvatarError = (message: string) => {
+  toast.error(message)
 }
 
 const handlePasswordChange = async (data: ChangePasswordDto) => {
   const success = await changePassword(data)
   if (success) {
     showPasswordModal.value = false
-    // TODO: Show success toast
+    toast.success('Пароль изменён')
   }
 }
 
@@ -152,8 +164,7 @@ const handleDeleteAccount = async (password: string) => {
 }
 
 const handleImageClick = (image: Image) => {
-  // TODO: Open image modal or navigate to image page
-  console.log('Image clicked:', image.id)
+  navigateTo(`/image/${image.id}`)
 }
 </script>
 

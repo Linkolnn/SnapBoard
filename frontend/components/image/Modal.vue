@@ -170,6 +170,8 @@ const confirmDelete = async () => {
     if (success) {
       isDeleteModalOpen.value = false
       emit('delete', props.image.id)
+      // Закрываем модальное окно после удаления
+      emit('close')
     }
   } finally {
     isDeleting.value = false
@@ -212,7 +214,7 @@ onUnmounted(() => {
 .image-modal
   position: fixed
   inset: 0
-  background: rgba(0, 0, 0, 0.9)
+  background: var(--modal-overlay)
   display: flex
   align-items: center
   justify-content: center
@@ -228,9 +230,10 @@ onUnmounted(() => {
     max-width: 1400px
     width: 100%
     max-height: 90vh
-    background: white
+    background: var(--modal-bg)
     border-radius: $radius-lg
     overflow: hidden
+    border: 1px solid var(--border-color)
 
     @include tablet
       flex-direction: column
@@ -252,7 +255,7 @@ onUnmounted(() => {
     display: flex
     align-items: center
     justify-content: center
-    background: $secondary-color
+    background: var(--bg-secondary)
     min-height: 400px
 
     @include tablet
@@ -287,6 +290,7 @@ onUnmounted(() => {
     @include tablet
       width: 69%
       height: 69%
+      max-height: 50vh
 
     @include mobile
       width: 100%
@@ -314,6 +318,7 @@ onUnmounted(() => {
     padding: 24px
     overflow-y: auto
     flex-shrink: 0
+    background: var(--modal-bg)
 
     @include laptop
       width: 320px
@@ -330,7 +335,7 @@ onUnmounted(() => {
 
   &__divider
     height: 1px
-    background: $gray-200
+    background: var(--border-color)
     margin: 20px 0
 
     @include mobile

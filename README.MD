@@ -11,6 +11,8 @@ SnapBoard - визуальная доска вдохновения для соз
 - Добавление описаний и заметок к картинкам
 - Светлая/темная тема
 
+docker-compose -f docker-compose.dev.yml up -d
+
 Технологии:
 Frontend:
 - Nuxt 4 - фреймворк для Vue.js

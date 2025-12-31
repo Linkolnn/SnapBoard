@@ -118,6 +118,7 @@ const handlePreviewError = () => {
     border-radius: $radius
     overflow: hidden
     max-width: 200px
+    border: 1px solid var(--border-color)
 
     img
       width: 100%
@@ -141,5 +142,5 @@ const handlePreviewError = () => {
       justify-content: center
 
       &:hover
-        background: $error-color
+        background: var(--error-color)
 </style>

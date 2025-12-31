@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useApi } from '~/composables/useApi'
 import type { Board, CreateBoardDto, UpdateBoardDto } from '~/types/board'
 
 interface PaginatedResponse<T> {
@@ -57,13 +58,15 @@ export const useBoardsStore = defineStore('boards', () => {
     updatedAt: data.updatedAt
   })
 
-  const fetchBoards = async (page = 1, pageSize = 12) => {
+  const fetchBoards = async (page = 1, pageSize = 12, userId?: string) => {
     isLoading.value = true
     error.value = null
     try {
-      const response = await get<PaginatedResponse<BoardResponse>>(
-        `/boards?page=${page}&pageSize=${pageSize}`
-      )
+      let url = `/boards?page=${page}&pageSize=${pageSize}`
+      if (userId) {
+        url += `&userId=${userId}`
+      }
+      const response = await get<PaginatedResponse<BoardResponse>>(url)
       boards.value = response.items.map(mapBoardResponse)
       pagination.value = {
         page: response.page,
@@ -78,6 +81,20 @@ export const useBoardsStore = defineStore('boards', () => {
     } finally {
       isLoading.value = false
     }
+  }
+
+  // Очистка досок (при logout или смене пользователя)
+  const clearBoards = () => {
+    boards.value = []
+    currentBoard.value = null
+    pagination.value = {
+      page: 1,
+      pageSize: 12,
+      totalItems: 0,
+      totalPages: 0,
+      hasMore: false
+    }
+    error.value = null
   }
 
   const fetchBoard = async (id: string) => {
@@ -158,14 +175,28 @@ export const useBoardsStore = defineStore('boards', () => {
   }
 
   // Сохранение изображения на доску
-  const addImageToBoard = async (boardId: string, imageId: string): Promise<boolean> => {
+  const addImageToBoard = async (boardId: string, imageId: string): Promise<{ success: boolean; alreadyExists?: boolean; isOwnImage?: boolean }> => {
     try {
       await post(`/boards/${boardId}/images`, { imageId })
-      return true
+      return { success: true }
     } catch (e: any) {
-      error.value = e.data?.message || 'Не удалось сохранить изображение'
-      console.error('Error adding image to board:', e)
-      return false
+      // Nuxt $fetch выбрасывает FetchError с разной структурой
+      // Проверяем все возможные места где может быть статус код
+      const statusCode = e.statusCode || e.status || e.response?.status || e.data?.statusCode
+      const isConflict = statusCode === 409
+      
+      // Получаем сообщение об ошибке
+      const errorMessage = e.data?.message || e.message || ''
+      
+      // Различаем два типа 409:
+      // 1. "Изображение уже на этой доске" - сохранённое изображение
+      // 2. "Изображение уже загружено на эту доску" - изображение принадлежит доске
+      const isOwnImage = errorMessage.includes('загружено') || errorMessage.includes('uploaded')
+      const isSavedImage = isConflict && !isOwnImage
+      
+      error.value = errorMessage || 'Не удалось сохранить изображение'
+      console.error('Error adding image to board:', e, 'Status:', statusCode, 'Message:', errorMessage, 'IsOwnImage:', isOwnImage)
+      return { success: false, alreadyExists: isSavedImage, isOwnImage }
     }
   }
 
@@ -199,6 +230,7 @@ export const useBoardsStore = defineStore('boards', () => {
     deleteBoard,
     addImageToBoard,
     removeImageFromBoard,
-    clearCurrentBoard
+    clearCurrentBoard,
+    clearBoards
   }
 })

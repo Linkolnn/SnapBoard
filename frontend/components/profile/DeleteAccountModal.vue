@@ -108,28 +108,28 @@ const handleDelete = () => {
   align-items: center
   justify-content: center
   padding: 24px
-  background: rgba(0, 0, 0, 0.6)
+  background: var(--modal-overlay)
   
   &__content
     width: 100%
     max-width: 440px
-    background: white
+    background: var(--modal-bg)
     border-radius: $radius-lg
     overflow: hidden
-    border: 2px solid $error-color
+    border: 2px solid var(--error-color)
   
   &__header
     display: flex
     align-items: center
     gap: 12px
     padding: 20px 24px
-    background: rgba($error-color, 0.05)
-    border-bottom: 1px solid rgba($error-color, 0.2)
+    background: var(--error-light)
+    border-bottom: 1px solid var(--error-color)
     
     h2
       font-size: 18px
       font-weight: 600
-      color: $error-color
+      color: var(--error-color)
   
   &__icon
     font-size: 24px
@@ -139,21 +139,21 @@ const handleDelete = () => {
   
   &__warning
     font-size: 15px
-    color: $text-light
+    color: var(--text-primary)
     margin-bottom: 16px
     
     strong
-      color: $error-color
+      color: var(--error-color)
   
   &__list
     margin: 0 0 20px 20px
-    color: $gray-600
+    color: var(--text-secondary)
     font-size: 14px
     line-height: 1.8
   
   &__confirm-text
     font-size: 14px
-    color: $gray-500
+    color: var(--text-secondary)
     margin-bottom: 12px
   
   &__footer
@@ -161,8 +161,8 @@ const handleDelete = () => {
     gap: 12px
     justify-content: flex-end
     padding: 16px 24px
-    background: $gray-50
-    border-top: 1px solid $gray-100
+    background: var(--bg-secondary)
+    border-top: 1px solid var(--border-color)
 
 // Transitions
 .modal-enter-active,
