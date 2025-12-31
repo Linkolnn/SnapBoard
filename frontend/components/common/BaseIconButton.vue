@@ -112,7 +112,7 @@ const buttonClasses = computed(() => [
       filter: brightness(0.85)
 
   &--ghost
-    background: transparent
+    background: var(--bg-tertiary)
     color: var(--text-primary)
 
     &:hover:not(:disabled)

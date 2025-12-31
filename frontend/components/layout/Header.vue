@@ -329,26 +329,21 @@ const clearSearchHistory = () => {
     gap: 15px
 
   &__link
+    padding: 0px
     color: var(--text-primary)
-    text-decoration: none
     font-weight: 500
-    transition: color $transition-fast
+    transition: $transition-normal
     position: relative
-    
+  
     &:hover
       color: var(--accent-color)
 
     &.router-link-active
-      color: var(--accent-color)
+      color: $text-light
+      background: $primary-color
+      border-radius: $radius
+      padding: 10px 16px
       
-      &::after
-        content: ''
-        position: absolute
-        bottom: -16px
-        left: 0
-        right: 0
-        height: 2px
-        background: var(--accent-color)
 
   &__actions
     display: flex
@@ -356,6 +351,8 @@ const clearSearchHistory = () => {
     gap: 16px
   
   &__theme-toggle
+    padding: 12px 
+
     @include mobile
       display: none
 

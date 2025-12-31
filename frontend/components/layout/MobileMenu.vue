@@ -49,6 +49,7 @@
                                 class="mobile-menu__item"
                             >
                                 <NuxtLink
+                                    class="mobile-menu__link"
                                     @click="close"
                                     :to="item.link"
                                 >
@@ -225,7 +226,8 @@ watch(
     padding: 16px 0
     flex: 1
   
-  &__item
+  &__link
+    display: block
     padding: 16px 24px
     color: var(--text-primary)
     text-decoration: none

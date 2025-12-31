@@ -22,7 +22,7 @@
             <CommonBaseInput
                 :model-value="fields.password.value"
                 type="password"
-                label="password"
+                label="Password"
                 placeholder="Пароль"
                 :error="fields.password.error"
                 :required="true"

@@ -398,8 +398,7 @@ onUnmounted(() => {
   
   &__actions
     display: flex
-    justify-content: space-between
-    align-items: center
+    flex-direction: column
     padding: 20px 24px
     background: var(--bg-secondary)
     border-radius: $radius
@@ -407,7 +406,6 @@ onUnmounted(() => {
     gap: 16px
     
     @include tablet
-      flex-direction: column
       align-items: stretch
     
     @include mobile
@@ -417,24 +415,26 @@ onUnmounted(() => {
   &__actions-left
     flex: 1
     width: 100%
+    display: flex
+    flex-direction: column
+    gap: 10px
   
   &__actions-right
     display: flex
+    width: 100%
     gap: 12px
     
     @include mobile
-      justify-content: center
+      justify-content: space-around
       flex-wrap: wrap
   
   &__title
     color: var(--text-primary)
     font-size: 20px
     font-weight: 600
-    margin: 0 0 8px
     
     @include mobile
       font-size: 18px
-      text-align: center
 
   &__description
     color: var(--text-primary)
@@ -445,13 +445,15 @@ onUnmounted(() => {
     display: flex
     gap: 8px
     flex-wrap: wrap
-    
-    @include mobile
-      justify-content: center
+
   
   &__tag
-    color: var(--text-muted)
-    font-size: 14px
+    padding: 4px 12px
+    background: var(--accent-light)
+    color: var(--accent-color)
+    border-radius: $radius-full
+    font-size: 13px
+    font-weight: 500
     
     @include mobile
       font-size: 12px
